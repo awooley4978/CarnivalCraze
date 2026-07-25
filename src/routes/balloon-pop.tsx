@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useTickets } from "~/context/TicketContext";
 
 export const Route = createFileRoute("/balloon-pop")({
   component: BalloonPop,
@@ -52,6 +53,17 @@ function BalloonPop() {
   const [dartsLeft, setDartsLeft] = useState(TOTAL_DARTS);
   const [gameState, setGameState] = useState<GameState>("playing");
 
+  const { tickets, earnTickets } = useTickets();
+  const paidForSession = useRef(false);
+
+  // Award tickets once when the player wins this session
+  useEffect(() => {
+    if (gameState === "won" && !paidForSession.current) {
+      paidForSession.current = true;
+      earnTickets(2);
+    }
+  }, [gameState, earnTickets]);
+
   const handleBalloonClick = useCallback(
     (id: number) => {
       if (gameState !== "playing") return;
@@ -84,6 +96,7 @@ function BalloonPop() {
     setBalloons(generateBalloons());
     setDartsLeft(TOTAL_DARTS);
     setGameState("playing");
+    paidForSession.current = false;
   }, []);
 
   const poppedCount = balloons.filter((b) => b.popped).length;
@@ -100,10 +113,13 @@ function BalloonPop() {
         </p>
       </div>
 
-      {/* Dart counter */}
-      <div className="sticky top-0 z-20 py-3">
+      {/* Dart counter + ticket balance */}
+      <div className="sticky top-0 z-20 py-3 flex gap-4">
         <span className="ticket-counter text-lg sm:text-xl">
           🎯 x{dartsLeft}
+        </span>
+        <span className="ticket-counter text-lg sm:text-xl">
+          🎟️ {tickets}
         </span>
       </div>
 
@@ -139,6 +155,9 @@ function BalloonPop() {
                 </h2>
                 <p className="font-carnival text-tent-canvas text-xl">
                   +2 🎟️
+                </p>
+                <p className="font-toon text-tent-canvas/60 text-sm">
+                  Balance: 🎟️ {tickets}
                 </p>
                 <button
                   type="button"

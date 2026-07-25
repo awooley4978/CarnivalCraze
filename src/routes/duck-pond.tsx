@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { useTickets } from "~/context/TicketContext";
 
 export const Route = createFileRoute("/duck-pond")({
   component: DuckPond,
@@ -41,9 +42,26 @@ function DuckPond() {
   const [gameState, setGameState] = useState<GameState>("playing");
   const [totalReward, setTotalReward] = useState(0);
 
+  const { tickets, earnTickets } = useTickets();
+  const paidForSession = useRef(false);
+
   const picksLeftRef = useRef(TOTAL_PICKS);
   const gameStateRef = useRef<GameState>("playing");
   const generationRef = useRef(0);
+
+  // Award tickets once when the game finishes — sum all picked duck values
+  useEffect(() => {
+    if (gameState === "finished" && !paidForSession.current) {
+      paidForSession.current = true;
+      // Compute reward synchronously from picked ducks (values are known immediately)
+      const reward = ducks
+        .filter((d) => d.picked)
+        .reduce((sum, d) => sum + d.value, 0);
+      if (reward > 0) {
+        earnTickets(reward);
+      }
+    }
+  }, [gameState, ducks, earnTickets]);
 
   // Stable random rotations for each duck position (regenerated on reset)
   const [rotations, setRotations] = useState<number[]>(() =>
@@ -96,6 +114,7 @@ function DuckPond() {
     setTotalReward(0);
     picksLeftRef.current = TOTAL_PICKS;
     gameStateRef.current = "playing";
+    paidForSession.current = false;
     setRotations(
       Array.from({ length: DUCK_COUNT }, () => (Math.random() - 0.5) * 20),
     );
@@ -119,10 +138,13 @@ function DuckPond() {
         </p>
       </div>
 
-      {/* Pick counter */}
-      <div className="sticky top-0 z-20 py-3">
+      {/* Pick counter + ticket balance */}
+      <div className="sticky top-0 z-20 py-3 flex gap-4">
         <span className="ticket-counter text-lg sm:text-xl">
           🦆 Picks: {picksLeft}
+        </span>
+        <span className="ticket-counter text-lg sm:text-xl">
+          🎟️ {tickets}
         </span>
       </div>
 
@@ -182,6 +204,10 @@ function DuckPond() {
                     </span>
                   ))}
                 </div>
+
+                <p className="font-toon text-tent-canvas/60 text-sm">
+                  Balance: 🎟️ {tickets}
+                </p>
 
                 <button
                   type="button"
