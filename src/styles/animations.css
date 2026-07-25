@@ -392,3 +392,121 @@
     opacity: 0.7;
   }
 }
+
+/* ═══════════════════════════════════════════════════
+   13. BALLOON-RESIST
+   Balloon compresses and wobbles when tapped, giving
+   tactile "give" before the actual pop.
+   Duration: 0.15s | Easing: ease-out
+   ═══════════════════════════════════════════════════ */
+@keyframes balloon-resist {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  30% {
+    transform: scale(0.85) rotate(3deg);
+  }
+  60% {
+    transform: scale(0.88) rotate(-2deg);
+  }
+  100% {
+    transform: scale(0.85) rotate(0deg);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   14. PARTICLE-BURST
+   Small colored circles flying outward from popped
+   balloon center. Used inline with randomized angles.
+   Duration: 0.4s | Easing: ease-out
+   ═══════════════════════════════════════════════════ */
+@keyframes particle-burst {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--px), var(--py)) scale(0);
+    opacity: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   15. VIGNETTE-PULSE
+   Red edge vignette for near-win tension moments.
+   Pulsing box-shadow inset to create urgency.
+   Duration: 1s | Easing: ease-in-out | Infinite
+   ═══════════════════════════════════════════════════ */
+@keyframes vignette-pulse {
+  0%, 100% {
+    box-shadow: inset 0 0 60px 20px rgba(255, 20, 20, 0.15);
+  }
+  50% {
+    box-shadow: inset 0 0 100px 40px rgba(255, 20, 20, 0.4);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   16. SHAKE-TENT
+   Intensified tent shake for big moments (win, prize
+   reveal). More aggressive than tent-stripe-wave.
+   Duration: 0.6s | Easing: ease-in-out
+   ═══════════════════════════════════════════════════ */
+@keyframes shake-tent {
+  0%, 100% {
+    transform: skewX(0deg) translateY(0);
+  }
+  10% {
+    transform: skewX(2deg) translateY(-4px);
+  }
+  20% {
+    transform: skewX(-2.5deg) translateY(3px);
+  }
+  30% {
+    transform: skewX(1.5deg) translateY(-3px);
+  }
+  40% {
+    transform: skewX(-1.5deg) translateY(2px);
+  }
+  50% {
+    transform: skewX(0.8deg) translateY(-1px);
+  }
+  60% {
+    transform: skewX(-0.5deg) translateY(0);
+  }
+  70% {
+    transform: skewX(0.3deg) translateY(-0.5px);
+  }
+  100% {
+    transform: skewX(0deg) translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   17. BALLOON-POP-SCALE
+   Balloon expands rapidly then shrinks to nothing.
+   Used in the bursting phase before particles scatter.
+   Duration: 0.25s | Easing: cubic-bezier(0.36,0,0.66,1)
+   ═══════════════════════════════════════════════════ */
+@keyframes balloon-pop-scale {
+  0% {
+    transform: scale(0.85);
+    opacity: 1;
+  }
+  35% {
+    transform: scale(1.3);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.animate-vignette-pulse {
+  animation: vignette-pulse 1s ease-in-out infinite;
+}
+
+.animate-shake-tent {
+  animation: shake-tent 0.6s ease-in-out;
+}
