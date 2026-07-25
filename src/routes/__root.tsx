@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { TicketProvider } from "~/context/TicketContext";
 import { PrizeProvider } from "~/context/PrizeContext";
 import { SceneProvider, useSceneTransition } from "~/context/SceneContext";
+import { SoundProvider } from "~/context/SoundContext";
 import BulbMarquee from "~/components/BulbMarquee";
 import TicketCounter from "~/components/TicketCounter";
 import SceneTransition from "~/components/SceneTransition";
@@ -63,9 +64,11 @@ function RootComponent() {
     <TicketProvider>
       <PrizeProvider>
         <SceneProvider>
-          <RootDocument>
-            <Outlet />
-          </RootDocument>
+          <SoundProvider>
+            <RootDocument>
+              <Outlet />
+            </RootDocument>
+          </SoundProvider>
         </SceneProvider>
       </PrizeProvider>
     </TicketProvider>
