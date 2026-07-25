@@ -3,6 +3,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useTickets } from "~/context/TicketContext";
 import { usePrizes } from "~/context/PrizeContext";
 import { useSceneTransition } from "~/context/SceneContext";
+import { useSound } from "~/context/SoundContext";
 import { useSwipeGesture } from "~/hooks/useSwipeGesture";
 import Confetti from "~/components/Confetti";
 
@@ -16,12 +17,12 @@ const BOTTLE_COUNT = 6;
 
 // Pyramid layout: row 0 (top) has 1, row 1 has 2, row 2 (bottom) has 3
 const PYRAMID: { row: number; col: number }[] = [
-  { row: 0, col: 0 }, // top
-  { row: 1, col: 0 }, // middle-left
-  { row: 1, col: 1 }, // middle-right
-  { row: 2, col: 0 }, // bottom-left
-  { row: 2, col: 1 }, // bottom-center
-  { row: 2, col: 2 }, // bottom-right
+  { row: 0, col: 0 },
+  { row: 1, col: 0 },
+  { row: 1, col: 1 },
+  { row: 2, col: 0 },
+  { row: 2, col: 1 },
+  { row: 2, col: 2 },
 ];
 
 // ── Types ───────────────────────────────────────────
@@ -29,9 +30,9 @@ type BottlePhase = "standing" | "hit" | "toppling" | "settling" | "fallen";
 
 interface DustParticle {
   id: number;
-  dx: number; // px horizontal scatter
-  dy: number; // px vertical scatter
-  size: number; // px
+  dx: number;
+  dy: number;
+  size: number;
 }
 
 interface Bottle {
@@ -39,8 +40,8 @@ interface Bottle {
   row: number;
   col: number;
   phase: BottlePhase;
-  fallDir: 1 | -1; // 1 = right, -1 = left
-  slideDist: number; // px to slide during topple
+  fallDir: 1 | -1;
+  slideDist: number;
   dustParticles: DustParticle[];
 }
 
@@ -54,19 +55,12 @@ function generateBottles(): Bottle[] {
     row: pos.row,
     col: pos.col,
     phase: "standing",
-    // Bottom row bottles slide more (more inertia); top bottles wobble
-    slideDist: pos.row === 2 ? 10 + Math.random() * 12 : 6 + Math.random() * 8,
-    // Alternate fall direction per column for visual variety
+    slideDist: pos.row === 2 ? 12 + Math.random() * 14 : 8 + Math.random() * 10,
     fallDir: (pos.col % 2 === 0 ? 1 : -1) as 1 | -1,
     dustParticles: [],
   }));
 }
 
-/**
- * Returns which bottle IDs are "above" the given bottle and would fall
- * in a chain reaction. A bottle at (row, col) supports bottles at
- * (row-1, col) and (row-1, col-1).
- */
 function getBottlesAbove(bottle: Bottle, allBottles: Bottle[]): Bottle[] {
   return allBottles.filter(
     (b) =>
@@ -75,10 +69,6 @@ function getBottlesAbove(bottle: Bottle, allBottles: Bottle[]): Bottle[] {
   );
 }
 
-/**
- * Recursively collect all bottles in the chain reaction in BFS order
- * (hit bottle first, then its direct supports, then their supports...).
- */
 function collectChain(
   startId: number,
   bottles: Bottle[],
@@ -95,7 +85,6 @@ function collectChain(
     if (!bottle) continue;
     result.push(bottle);
     const above = getBottlesAbove(bottle, bottles);
-    // Add above bottles — push left then right for consistent visual order
     const sorted = [...above].sort((a, b) => a.col - b.col);
     for (const ab of sorted) {
       if (!seen.has(ab.id)) queue.push(ab.id);
@@ -106,18 +95,17 @@ function collectChain(
 }
 
 function generateDustParticles(): DustParticle[] {
-  const count = 3 + Math.floor(Math.random() * 3); // 3–5
+  const count = 3 + Math.floor(Math.random() * 4);
   return Array.from({ length: count }, (_, i) => ({
     id: i,
-    dx: (Math.random() - 0.5) * 30, // -15 to +15px
-    dy: -(8 + Math.random() * 16), // -8 to -24px (mostly upward)
-    size: 2 + Math.random() * 3, // 2–5px
+    dx: (Math.random() - 0.5) * 35,
+    dy: -(8 + Math.random() * 20),
+    size: 2 + Math.random() * 4,
   }));
 }
 
 // ── Diegetic UI Sub-components ─────────────────────
 
-/** Wooden sign hanging above the booth: "BOTTLE BASH" */
 function BashSign({ glow }: { glow?: boolean }) {
   return (
     <div
@@ -132,7 +120,6 @@ function BashSign({ glow }: { glow?: boolean }) {
       <p className="font-carnival text-tent-canvas text-lg sm:text-2xl m-0 text-center leading-tight">
         BOTTLE BASH
       </p>
-      {/* Hanging rope illusion */}
       <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-1 h-3 bg-tent-canvas/60 rounded-full" />
       <div className="absolute -top-3 left-[calc(50%-18px)] w-1 h-3 bg-tent-canvas/60 rounded-full" />
       <div className="absolute -top-3 left-[calc(50%+18px)] w-1 h-3 bg-tent-canvas/60 rounded-full" />
@@ -140,7 +127,6 @@ function BashSign({ glow }: { glow?: boolean }) {
   );
 }
 
-/** Chalkboard on the right wall showing ticket balance */
 function ChalkboardTickets({ tickets }: { tickets: number }) {
   return (
     <div className="bg-chalkboard rounded-sm px-2 py-1 inline-block shadow-[3px_3px_0_var(--color-toon-shadow)]">
@@ -151,7 +137,6 @@ function ChalkboardTickets({ tickets }: { tickets: number }) {
   );
 }
 
-/** Physical baseball ammo display in the wooden crate */
 function BaseballDisplay({ used, total }: { used: number; total: number }) {
   return (
     <div className="flex items-center gap-2 sm:gap-3">
@@ -167,7 +152,6 @@ function BaseballDisplay({ used, total }: { used: number; total: number }) {
             title={isUsed ? "Thrown" : "Ready"}
           >
             ⚾
-            {/* "Taken" mark when used */}
             {isUsed && (
               <div className="absolute bottom-0.5 left-2 right-2 h-0.5 bg-wood-dark rounded-full" />
             )}
@@ -201,40 +185,36 @@ function BottleItem({
   const fallDir = bottle.fallDir;
   const slideDist = bottle.slideDist;
 
-  // Style based on phase
   const getTransform = (): string => {
     if (isStanding) return "rotate(0deg) translateY(0) translateX(0)";
-    if (isHit) return "rotate(-16deg) translateY(-5px) translateX(0)";
+    if (isHit) return "rotate(-16deg) translateY(-6px) translateX(0)";
     if (isToppling)
-      return `rotate(${fallDir * 83}deg) translateY(12px) translateX(${fallDir * slideDist}px)`;
-    if (isSettling || isFallen)
-      return `rotate(${fallDir * 83}deg) translateY(12px) translateX(${fallDir * slideDist}px)`;
+      return `rotate(${fallDir * 78}deg) translateY(14px) translateX(${fallDir * slideDist}px)`;
+    if (isSettling)
+      return `rotate(${fallDir * 75}deg) translateY(11px) translateX(${fallDir * slideDist}px)`;
+    if (isFallen)
+      return `rotate(${fallDir * 75}deg) translateY(11px) translateX(${fallDir * slideDist}px)`;
     return "";
   };
 
   const getOpacity = (): number => {
     if (isStanding) return 1;
     if (isHit) return 1;
-    if (isToppling) return 0.5;
-    if (isSettling) return 0.4;
+    if (isToppling) return 0.7;
+    if (isSettling) return 0.45;
     if (isFallen) return 0.35;
     return 1;
   };
 
-  const getTransition = (): string => {
-    if (isHit) return "transform 0.15s ease-out, opacity 0.15s ease-out";
-    if (isToppling)
-      return "transform 0.25s cubic-bezier(0.25,0.1,0.25,1), opacity 0.25s ease-out";
-    if (isSettling)
-      return "transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease-out";
-    if (isFallen) return "none";
-    if (isClickable)
-      return "transform 0.15s ease-out, opacity 0.15s ease-out";
-    return "none";
+  const getAnimation = (): string | undefined => {
+    if (isHit) return "bottle-hit 0.15s ease-out forwards";
+    if (isToppling) return "bottle-tumble-weight 0.5s cubic-bezier(0.25,0.1,0.25,1) forwards";
+    if (isSettling) return undefined;
+    if (isFallen) return undefined;
+    return undefined;
   };
 
   if (isFallen) {
-    // Render fallen bottle statically in final position
     return (
       <div
         className="relative flex flex-col items-center select-none pointer-events-none"
@@ -261,10 +241,12 @@ function BottleItem({
       style={{
         transform: getTransform(),
         opacity: getOpacity(),
-        transition: getTransition(),
-      }}
+        animation: getAnimation(),
+        "--fall-dir": fallDir,
+        "--slide-dist": `${slideDist}px`,
+      } as React.CSSProperties}
     >
-      {/* Dust particles — visible during settling phase */}
+      {/* Dust particles — visible during topple and settle */}
       {(isSettling || isToppling) &&
         bottle.dustParticles.map((p) => (
           <div
@@ -275,7 +257,7 @@ function BottleItem({
               height: `${p.size}px`,
               backgroundColor: "#D4B896",
               left: "50%",
-              top: "85%", // near bottle base
+              top: "85%",
               animation: "dust-particle 0.35s ease-out forwards",
               "--dx": `${p.dx}px`,
               "--dy": `${p.dy}px`,
@@ -292,7 +274,7 @@ function BottleItem({
   );
 }
 
-/** The visual bottle body — shared between standing and fallen states */
+/** Realistic milk bottle shape: wide base, tapered neck, slight lip at top */
 function BottleBody({
   isNearWin,
   isShimmering,
@@ -306,47 +288,92 @@ function BottleBody({
     <div
       className={`
         relative
-        bg-tent-canvas
-        rounded-bounce
-        border-toon
-        shadow-[4px_4px_0_var(--color-toon-shadow)]
         flex flex-col items-center
         transition-transform duration-150
         ${isClickable ? "hover:scale-105 active:scale-95" : ""}
         ${isShimmering ? "animate-[bottle-shimmer_1.2s_ease-in-out_infinite]" : ""}
       `}
-      style={{
-        width: "44px",
-        height: "80px",
-      }}
     >
-      {/* Bottle neck — slightly narrower */}
+      {/* Bottle neck lip — slight flare at top */}
       <div
-        className="bg-tent-canvas border-toon rounded-bounce"
+        className="bg-tent-canvas border-toon rounded-full relative z-10"
         style={{
-          width: "28px",
-          height: "18px",
-          marginTop: "-4px",
+          width: "30px",
+          height: "6px",
+          marginBottom: "-2px",
+          boxShadow: "2px 1px 0 var(--color-toon-shadow)",
+        }}
+      />
+
+      {/* Bottle neck — tapered, narrower */}
+      <div
+        className="bg-tent-canvas border-toon relative z-10"
+        style={{
+          width: "20px",
+          height: "16px",
           borderBottom: "none",
-          borderBottomLeftRadius: "0",
-          borderBottomRightRadius: "0",
+          borderRadius: "4px 4px 0 0",
         }}
       />
-      {/* Highlight/shine */}
+
+      {/* Neck-to-body transition — angled shoulders */}
       <div
-        className="absolute bg-white/30 rounded-full"
+        className="relative z-10"
         style={{
-          width: "8px",
-          height: "30px",
-          top: "22px",
-          left: "8px",
+          width: "0",
+          height: "0",
+          borderLeft: "14px solid transparent",
+          borderRight: "14px solid transparent",
+          borderTop: "8px solid var(--color-tent-canvas)",
+          filter: "drop-shadow(2px 0 0 var(--color-toon-shadow)) drop-shadow(-2px 0 0 var(--color-toon-shadow))",
         }}
       />
-      {/* Label — faint milk bottle text */}
+
+      {/* Bottle body — wider base */}
       <div
-        className="absolute bottom-2 left-0 right-0 text-center font-toon text-ink/15 text-[8px] leading-none"
+        className="relative bg-tent-canvas border-toon flex flex-col items-center"
+        style={{
+          width: "48px",
+          height: "62px",
+          borderRadius: "8px 8px 10px 10px",
+          boxShadow: "4px 4px 0 var(--color-toon-shadow)",
+        }}
       >
-        MILK
+        {/* Glass specular highlight — long vertical reflection */}
+        <div
+          className="absolute rounded-full pointer-events-none"
+          style={{
+            width: "6px",
+            height: "34px",
+            top: "10px",
+            left: "7px",
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.05) 100%)",
+          }}
+        />
+        {/* Secondary small highlight */}
+        <div
+          className="absolute w-2 h-1.5 rounded-full bg-white/35 pointer-events-none"
+          style={{
+            top: "12px",
+            left: "16px",
+          }}
+        />
+
+        {/* Label — faint milk text */}
+        <div
+          className="absolute bottom-2 left-0 right-0 text-center font-toon text-ink/15 text-[8px] leading-none"
+        >
+          MILK
+        </div>
+
+        {/* Glass rim line at base */}
+        <div
+          className="absolute bottom-0 left-1 right-1 h-[2px] rounded-full"
+          style={{
+            background: "linear-gradient(90deg, transparent, rgba(0,0,0,0.1), transparent)",
+          }}
+        />
       </div>
     </div>
   );
@@ -363,23 +390,31 @@ function MilkBottleToss() {
   const { tickets, earnTickets } = useTickets();
   const { awardPrize } = usePrizes();
   const { triggerTransition } = useSceneTransition();
+  const { playSfx, playMusic, setTempo, stopMusic } = useSound();
   const navigate = useNavigate();
 
   const paidForSession = useRef(false);
   const awardedPrizeRef = useRef<string | null>(null);
   const mainRef = useRef<HTMLElement>(null);
-  // Track timeouts so we can clear them on play-again
   const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // ── Curtain exit via scene context ──
   const exitToMidway = useCallback(() => {
-    // Clear any pending timeouts
     for (const t of timeoutRefs.current) clearTimeout(t);
     timeoutRefs.current = [];
+    stopMusic();
     triggerTransition(() => {
       navigate({ to: "/" });
     });
-  }, [triggerTransition, navigate]);
+  }, [triggerTransition, navigate, stopMusic]);
+
+  // ── Music on mount ──
+  useEffect(() => {
+    playMusic("bottle-bash");
+    return () => {
+      setTempo(1.0);
+    };
+  }, [playMusic, setTempo]);
 
   // ── Swipe-down gesture ──
   useSwipeGesture(mainRef, exitToMidway, 80);
@@ -389,10 +424,20 @@ function MilkBottleToss() {
     if (gameState === "won" && !paidForSession.current) {
       paidForSession.current = true;
       earnTickets(3);
+      playSfx("ticket");
       awardedPrizeRef.current = awardPrize();
+      playSfx("prize");
+      playSfx("fanfare");
       setTimeout(() => setShowConfetti(true), 100);
     }
-  }, [gameState, earnTickets, awardPrize]);
+  }, [gameState, earnTickets, awardPrize, playSfx]);
+
+  // ── Lose SFX ──
+  useEffect(() => {
+    if (gameState === "lost") {
+      playSfx("lose");
+    }
+  }, [gameState, playSfx]);
 
   // ── Handle bottle tap ──
   const handleBottleClick = useCallback(
@@ -402,17 +447,26 @@ function MilkBottleToss() {
       const bottle = bottles.find((b) => b.id === id);
       if (!bottle || bottle.phase !== "standing") return;
 
-      // Calculate the chain of bottles that will fall
       const chain = collectChain(id, bottles);
       const newThrowsLeft = throwsLeft - 1;
       setThrowsLeft(newThrowsLeft);
 
-      // Stagger duration between chain bottles: 60–80ms
+      // Stagger duration: 60–80ms between chain bottles
       const staggerMs = 60 + Math.random() * 20;
 
-      // Schedule each bottle in the chain
+      // Play initial hit sound immediately
+      playSfx("bottle_hit");
+
       chain.forEach((chainBottle, index) => {
         const offset = index * staggerMs;
+
+        // Play chain/crash sound for each bottle in the chain
+        if (index > 0) {
+          const soundDelay = setTimeout(() => {
+            playSfx(index === 1 ? "bottle_crash" : "bottle_chain");
+          }, offset);
+          timeoutRefs.current.push(soundDelay);
+        }
 
         // Stage 1: hit
         const t1 = setTimeout(() => {
@@ -440,7 +494,7 @@ function MilkBottleToss() {
         }, offset + 150);
         timeoutRefs.current.push(t2);
 
-        // Stage 3: settle (400ms after hit = 150 + 250)
+        // Stage 3: settle (500ms after hit = 150 + 350)
         const t3 = setTimeout(() => {
           setBottles((prev) =>
             prev.map((b) =>
@@ -449,10 +503,10 @@ function MilkBottleToss() {
                 : b,
             ),
           );
-        }, offset + 400);
+        }, offset + 500);
         timeoutRefs.current.push(t3);
 
-        // Stage 4: fallen (600ms after hit = 150 + 250 + 200)
+        // Stage 4: fallen (700ms after hit)
         const t4 = setTimeout(() => {
           setBottles((prev) => {
             const updated = prev.map((b) =>
@@ -461,7 +515,6 @@ function MilkBottleToss() {
                 : b,
             );
 
-            // Check win/lose on the last chain bottle
             if (chainBottle.id === chain[chain.length - 1].id) {
               const allFallen = updated.every((b) => b.phase === "fallen");
               if (allFallen) {
@@ -473,16 +526,15 @@ function MilkBottleToss() {
 
             return updated;
           });
-        }, offset + 600);
+        }, offset + 700);
         timeoutRefs.current.push(t4);
       });
     },
-    [bottles, throwsLeft, gameState],
+    [bottles, throwsLeft, gameState, playSfx],
   );
 
   // ── Play again ──
   const handlePlayAgain = useCallback(() => {
-    // Clear all pending timeouts
     for (const t of timeoutRefs.current) clearTimeout(t);
     timeoutRefs.current = [];
     setBottles(generateBottles());
@@ -502,20 +554,18 @@ function MilkBottleToss() {
     throwsLeft === 1 &&
     bottles.some((b) => b.phase === "standing");
 
-  // Confetti palette — warm bottle-themed colors
   const confettiColors = useMemo(
     () => [
-      "#FFF8E7", // tent-canvas
-      "#FF6B1A", // tangerine
-      "#7A4F2B", // wood-light
-      "#FFE600", // electric-yellow
-      "#39FF14", // acid-green
-      "#C4A265", // cork
+      "#FFF8E7",
+      "#FF6B1A",
+      "#7A4F2B",
+      "#FFE600",
+      "#39FF14",
+      "#C4A265",
     ],
     [],
   );
 
-  // Group bottles by row for rendering
   const bottlesByRow = useMemo(
     () => [0, 1, 2].map((row) => bottles.filter((b) => b.row === row)),
     [bottles],
@@ -601,10 +651,8 @@ function MilkBottleToss() {
 
       {/* ═══ CENTER AREA: SIGN + PYRAMID + LEDGE ═══ */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-dvh px-3 pt-14 pb-36">
-        {/* Sign */}
         <BashSign glow={isNearWin} />
 
-        {/* Booth backdrop for the pyramid area */}
         <div
           className={`
             relative w-full max-w-md
@@ -613,25 +661,22 @@ function MilkBottleToss() {
             flex flex-col items-center justify-end
             px-4 pt-8 pb-0
           `}
-          style={{ minHeight: "340px" }}
+          style={{ minHeight: "360px" }}
         >
           {/* Bottle pyramid */}
-          <div className="flex flex-col items-center gap-2 mb-1">
-            {/* Row 0 — top (1 bottle) */}
-            <div className="flex justify-center gap-5">
-              {bottlesByRow[0].map((bottle) => (
+          <div className="flex flex-col items-center gap-3 mb-1">
+            {bottlesByRow[0].map((bottle) => (
+              <div key={bottle.id} className="flex justify-center">
                 <BottleItem
-                  key={bottle.id}
                   bottle={bottle}
                   isNearWin={isNearWin}
                   onClick={() => handleBottleClick(bottle.id)}
                   disabled={gameState !== "playing"}
                 />
-              ))}
-            </div>
+              </div>
+            ))}
 
-            {/* Row 1 — middle (2 bottles) */}
-            <div className="flex justify-center gap-5">
+            <div className="flex justify-center gap-6">
               {bottlesByRow[1].map((bottle) => (
                 <BottleItem
                   key={bottle.id}
@@ -643,8 +688,7 @@ function MilkBottleToss() {
               ))}
             </div>
 
-            {/* Row 2 — bottom (3 bottles) */}
-            <div className="flex justify-center gap-5">
+            <div className="flex justify-center gap-6">
               {bottlesByRow[2].map((bottle) => (
                 <BottleItem
                   key={bottle.id}
@@ -657,7 +701,6 @@ function MilkBottleToss() {
             </div>
           </div>
 
-          {/* Wooden ledge / shelf */}
           <div
             className="w-full h-3 rounded-sm mt-0"
             style={{
@@ -672,9 +715,7 @@ function MilkBottleToss() {
 
       {/* ═══ WOODEN BASEBALL CRATE (bottom) ═══ */}
       <div className="absolute bottom-0 left-0 right-0 z-20">
-        {/* Crate back rim */}
         <div className="h-2 sm:h-3 bg-wood-horizontal border-t-2 border-toon-shadow" />
-        {/* Crate face with slots */}
         <div
           className="bg-wood pt-2 pb-4 px-4 sm:px-6 flex items-center justify-center gap-4"
           style={{
@@ -683,7 +724,6 @@ function MilkBottleToss() {
               "linear-gradient(180deg, #5C3A1E 0%, #3E2210 40%, #2A1508 100%)",
           }}
         >
-          {/* Slotted crate dividers */}
           <div className="flex items-center gap-1">
             <BaseballDisplay used={usedThrows} total={TOTAL_THROWS} />
           </div>
@@ -691,7 +731,6 @@ function MilkBottleToss() {
             · · · baseballs · · ·
           </div>
         </div>
-        {/* Crate front lip */}
         <div
           className="h-1.5 sm:h-2 mx-2 rounded-b-sm"
           style={{
@@ -717,7 +756,6 @@ function MilkBottleToss() {
               +3 🎟️
             </p>
 
-            {/* Prize reveal with spotlight */}
             {awardedPrizeRef.current && (
               <div
                 className="relative mt-2 mb-1 px-6 py-3 rounded-bounce animate-bounce-in border-toon"

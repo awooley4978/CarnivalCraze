@@ -9,6 +9,7 @@ export type SfxName =
   | "dart_throw"
   | "bottle_hit"
   | "bottle_chain"
+  | "bottle_crash"
   | "splash"
   | "reveal"
   | "jackpot"
@@ -19,7 +20,8 @@ export type SfxName =
   | "denied"
   | "whoosh"
   | "bell"
-  | "curtain";
+  | "curtain"
+  | "tink";
 
 /** Fill a buffer channel with values from a generator function */
 function fillBuffer(
@@ -46,14 +48,19 @@ function noiseSample(_seed: number): number {
 
 // ── Individual Sound Generators ──────────────────────
 
-/** Short high-frequency burst with quick decay — balloon pop */
+/** Loud burst with quick decay — realistic balloon pop */
 function generatePop(ctx: AudioContext): AudioBuffer {
-  return fillBuffer(ctx, 0.18, (t) => {
-    const envelope = Math.exp(-t * 35);
-    const freq = 900 + Math.sin(t * 200) * 150;
-    const body = Math.sin(2 * Math.PI * freq * t);
-    const click = t < 0.005 ? (1 - t / 0.005) * 0.3 : 0;
-    return (body * 0.6 + click) * envelope;
+  return fillBuffer(ctx, 0.22, (t) => {
+    // Sharp attack envelope — burst peaks at 1ms, then fast decay
+    const attack = Math.min(t / 0.001, 1);
+    const envelope = attack * Math.exp(-t * 28);
+    // Broad-spectrum burst: mix of low thud + high crack
+    const lowBurst = Math.sin(2 * Math.PI * 180 * t) * Math.exp(-t * 40) * 0.7;
+    const midCrack = Math.sin(2 * Math.PI * 600 * t + Math.sin(t * 500) * 2) * 0.5;
+    const highFizz = Math.sin(2 * Math.PI * 2400 * t) * 0.25 * Math.exp(-t * 55);
+    // Initial click transient
+    const click = t < 0.003 ? (1 - t / 0.003) * 0.5 : 0;
+    return (lowBurst * 0.5 + midCrack * 0.4 + highFizz * 0.3 + click) * envelope;
   });
 }
 
@@ -66,26 +73,75 @@ function generateDartThrow(ctx: AudioContext): AudioBuffer {
   });
 }
 
-/** Mid-frequency thunk with slight reverb tail — bottle hit */
+/** Mid-frequency glass thunk with resonance tail — bottle hit */
 function generateBottleHit(ctx: AudioContext): AudioBuffer {
-  return fillBuffer(ctx, 0.25, (t) => {
-    const envelope = Math.exp(-t * 18);
-    const freq = 320 + Math.sin(t * 80) * 40;
+  return fillBuffer(ctx, 0.35, (t) => {
+    // Glass impact: sharp attack + ringing resonance
+    const attack = Math.min(t / 0.002, 1);
+    const bodyEnv = attack * Math.exp(-t * 14);
+    const ringEnv = attack * Math.exp(-t * 6);
+    // Impact body
+    const freq = 340 + Math.sin(t * 90) * 50;
     const body = Math.sin(2 * Math.PI * freq * t);
-    // Add a very subtle harmonic
-    const harmonic = Math.sin(2 * Math.PI * freq * 2.01 * t) * 0.15;
-    return (body * 0.55 + harmonic) * envelope;
+    // Glass resonance harmonics
+    const ring1 = Math.sin(2 * Math.PI * 680 * t) * 0.3;
+    const ring2 = Math.sin(2 * Math.PI * 1020 * t) * 0.15;
+    const ring3 = Math.sin(2 * Math.PI * 1367 * t) * 0.08;
+    // Initial click
+    const click = t < 0.004 ? (1 - t / 0.004) * 0.45 : 0;
+    return (body * 0.5 + ring1 * 0.25 + ring2 * 0.12 + ring3 * 0.06 + click) * bodyEnv
+      + (ring1 + ring2 + ring3) * ringEnv * 0.15;
   });
 }
 
-/** Slightly higher variant for chain reaction bottles */
+/** Slightly higher variant for chain reaction bottles — glassy cascade */
 function generateBottleChain(ctx: AudioContext): AudioBuffer {
-  return fillBuffer(ctx, 0.2, (t) => {
-    const envelope = Math.exp(-t * 22);
-    const freq = 380 + Math.sin(t * 100) * 50;
+  return fillBuffer(ctx, 0.28, (t) => {
+    const attack = Math.min(t / 0.002, 1);
+    const envelope = attack * Math.exp(-t * 16);
+    const freq = 420 + Math.sin(t * 110) * 60;
     const body = Math.sin(2 * Math.PI * freq * t);
-    const harmonic = Math.sin(2 * Math.PI * freq * 2.01 * t) * 0.1;
-    return (body * 0.45 + harmonic) * envelope;
+    const ring1 = Math.sin(2 * Math.PI * 840 * t) * 0.22;
+    const ring2 = Math.sin(2 * Math.PI * 1260 * t) * 0.1;
+    const click = t < 0.003 ? (1 - t / 0.003) * 0.35 : 0;
+    return (body * 0.4 + ring1 * 0.2 + ring2 * 0.08 + click) * envelope;
+  });
+}
+
+/** Glass-like crash with rich resonance — bottle tumble impact */
+function generateBottleCrash(ctx: AudioContext): AudioBuffer {
+  return fillBuffer(ctx, 0.45, (t) => {
+    const attack = Math.min(t / 0.0015, 1);
+    const env = attack * Math.exp(-t * 10);
+    const ringEnv = attack * Math.exp(-t * 5);
+    // Layered glass frequencies
+    const f1 = Math.sin(2 * Math.PI * 380 * t) * 0.45;
+    const f2 = Math.sin(2 * Math.PI * 570 * t) * 0.3;
+    const f3 = Math.sin(2 * Math.PI * 760 * t + 0.5) * 0.2;
+    const f4 = Math.sin(2 * Math.PI * 1140 * t + 1.2) * 0.12;
+    const f5 = Math.sin(2 * Math.PI * 1520 * t) * 0.06;
+    // Shatter noise burst
+    const noiseBurst = (Math.random() * 2 - 1) * Math.exp(-t * 30) * 0.2;
+    const click = t < 0.002 ? (1 - t / 0.002) * 0.5 : 0;
+    return (f1 + f2 + f3 + f4 + f5 + noiseBurst + click) * env
+      + (f1 * 0.3 + f2 * 0.2 + f3 * 0.1) * ringEnv;
+  });
+}
+
+/** Short sharp metallic ping — "tink tink" for duck shoot */
+function generateTink(ctx: AudioContext): AudioBuffer {
+  return fillBuffer(ctx, 0.15, (t) => {
+    const attack = Math.min(t / 0.0005, 1);
+    const envelope = attack * Math.exp(-t * 40);
+    // Two metallic high frequencies with slight detune for richness
+    const freq1 = 2600 + Math.sin(t * 300) * 200;
+    const freq2 = 2650 + Math.cos(t * 350) * 180;
+    const ping1 = Math.sin(2 * Math.PI * freq1 * t);
+    const ping2 = Math.sin(2 * Math.PI * freq2 * t);
+    // Subtle overtone
+    const overtone = Math.sin(2 * Math.PI * 5200 * t) * 0.15 * Math.exp(-t * 55);
+    const click = t < 0.001 ? (1 - t / 0.001) * 0.6 : 0;
+    return (ping1 * 0.35 + ping2 * 0.3 + overtone + click) * envelope;
   });
 }
 
@@ -282,6 +338,7 @@ const generators: Record<SfxName, (ctx: AudioContext) => AudioBuffer> = {
   dart_throw: generateDartThrow,
   bottle_hit: generateBottleHit,
   bottle_chain: generateBottleChain,
+  bottle_crash: generateBottleCrash,
   splash: generateSplash,
   reveal: generateReveal,
   jackpot: generateJackpot,
@@ -293,6 +350,7 @@ const generators: Record<SfxName, (ctx: AudioContext) => AudioBuffer> = {
   whoosh: generateWhoosh,
   bell: generateBell,
   curtain: generateCurtain,
+  tink: generateTink,
 };
 
 /**
