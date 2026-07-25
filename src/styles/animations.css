@@ -242,3 +242,118 @@
 .hover\:animate-wiggle:hover {
   animation: wiggle 0.4s ease-in-out infinite;
 }
+
+/* ═══════════════════════════════════════════════════
+   7. BLINK-BULB-DOUBLE
+   Faster, chaotic double-blink for select marquee bulbs.
+   Creates the flickering effect — two quick off/on cycles
+   per animation loop instead of one.
+   Duration: 0.9s | Easing: step-end | Infinite
+   ═══════════════════════════════════════════════════ */
+@keyframes blink-bulb-double {
+  0%, 100% {
+    opacity: 1;
+    box-shadow:
+      0 0 8px 3px var(--color-bulb-gold, #FFD700),
+      0 0 20px 6px rgba(255, 215, 0, 0.5),
+      0 0 40px 10px rgba(255, 215, 0, 0.25);
+  }
+  8% {
+    opacity: 0.1;
+    box-shadow: none;
+  }
+  16% {
+    opacity: 1;
+    box-shadow:
+      0 0 8px 3px var(--color-bulb-gold, #FFD700),
+      0 0 20px 6px rgba(255, 215, 0, 0.5),
+      0 0 40px 10px rgba(255, 215, 0, 0.25);
+  }
+  24% {
+    opacity: 0.15;
+    box-shadow: none;
+  }
+  32% {
+    opacity: 0.7;
+    box-shadow:
+      0 0 4px 2px var(--color-bulb-gold, #FFD700);
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 0 8px 3px var(--color-bulb-gold, #FFD700),
+      0 0 20px 6px rgba(255, 215, 0, 0.5),
+      0 0 40px 10px rgba(255, 215, 0, 0.25);
+  }
+  65% {
+    opacity: 0.2;
+    box-shadow: none;
+  }
+  78% {
+    opacity: 1;
+    box-shadow:
+      0 0 8px 3px var(--color-bulb-gold, #FFD700),
+      0 0 20px 6px rgba(255, 215, 0, 0.5),
+      0 0 40px 10px rgba(255, 215, 0, 0.25);
+  }
+}
+
+.animate-blink-bulb-double {
+  animation: blink-bulb-double 0.9s step-end infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   8. COUNTER-FLASH
+   Quick scale + brightness pulse when ticket count changes.
+   Duration: 0.3s | Easing: ease-in-out
+   ═══════════════════════════════════════════════════ */
+@keyframes counter-flash {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.15);
+    filter: brightness(1.3);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+.animate-counter-flash {
+  animation: counter-flash 0.3s ease-in-out;
+}
+
+/* ═══════════════════════════════════════════════════
+   9. CURTAIN-CLOSE-LEFT / CURTAIN-CLOSE-RIGHT
+   Tent flap curtains sliding in from edges.
+   Used by SceneTransition state machine via CSS transitions,
+   but provided here as keyframe fallbacks for Phase 2+.
+   Duration: 0.4s | Easing: cubic-bezier(0.4,0,0.2,1)
+   ═══════════════════════════════════════════════════ */
+@keyframes curtain-close-left {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes curtain-close-right {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(0); }
+}
+
+/* ═══════════════════════════════════════════════════
+   10. CURTAIN-OPEN-LEFT / CURTAIN-OPEN-RIGHT
+   Tent flap curtains sliding out to edges.
+   Duration: 0.35s | Easing: cubic-bezier(0.4,0,0.2,1)
+   ═══════════════════════════════════════════════════ */
+@keyframes curtain-open-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes curtain-open-right {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(100%); }
+}

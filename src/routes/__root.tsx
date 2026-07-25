@@ -8,6 +8,9 @@ import type { ReactNode } from "react";
 
 import { TicketProvider } from "~/context/TicketContext";
 import { PrizeProvider } from "~/context/PrizeContext";
+import BulbMarquee from "~/components/BulbMarquee";
+import TicketCounter from "~/components/TicketCounter";
+import SceneTransition from "~/components/SceneTransition";
 import appCss from "~/styles/app.css?url";
 
 export const Route = createRootRoute({
@@ -73,7 +76,11 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <BulbMarquee />
+        <SceneTransition isOpen={true}>
+          {children}
+        </SceneTransition>
+        <TicketCounter />
         <Scripts />
         {/* Service Worker registration for PWA */}
         <script
