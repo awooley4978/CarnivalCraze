@@ -3,6 +3,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useTickets } from "~/context/TicketContext";
 import { usePrizes } from "~/context/PrizeContext";
 import { useSceneTransition } from "~/context/SceneContext";
+import { useSound } from "~/context/SoundContext";
 import { useSwipeGesture } from "~/hooks/useSwipeGesture";
 import Confetti from "~/components/Confetti";
 
@@ -19,6 +20,8 @@ interface Duck {
   value: number;
   picked: boolean;
   revealed: boolean;
+  /** 1 = fall right, -1 = fall left */
+  fallDir: 1 | -1;
 }
 
 type GameState = "playing" | "finished";
@@ -38,31 +41,31 @@ function generateDucks(): Duck[] {
     value: randomTicketValue(),
     picked: false,
     revealed: false,
+    fallDir: (i % 2 === 0 ? 1 : -1) as 1 | -1,
   }));
 }
 
-// Scatter positions for ducks within the pond oval (x%, y%)
+// Positions for ducks along the metal track — spread across the track width
 const DUCK_POSITIONS = [
-  { x: 18, y: 22 },
-  { x: 68, y: 18 },
-  { x: 38, y: 42 },
-  { x: 78, y: 38 },
-  { x: 22, y: 62 },
-  { x: 55, y: 58 },
-  { x: 80, y: 65 },
-  { x: 42, y: 78 },
+  { x: 12, y: 30 },
+  { x: 28, y: 52 },
+  { x: 44, y: 24 },
+  { x: 60, y: 48 },
+  { x: 76, y: 35 },
+  { x: 18, y: 58 },
+  { x: 52, y: 65 },
+  { x: 82, y: 55 },
 ];
 
-// ── Confetti colours (water-themed) ──────────────────
+// ── Confetti colours ──────────────────────────────────
 const WATER_COLORS = ["#00BFFF", "#FFE600", "#39FF14", "#7B2D8E", "#1A8FC0", "#4DC8F0"];
 
 // ── Sub-Components ──────────────────────────────────
 
-/** Life-preserver sign hanging above the track */
+/** Shooting gallery sign hanging above the track */
 function DuckShootSign() {
   return (
     <div className="relative mx-auto mb-3 flex items-center justify-center" aria-hidden>
-      {/* Ring — redesigned as a shooting gallery sign */}
       <div
         className="
           relative w-28 h-28 sm:w-36 sm:h-36 rounded-full
@@ -76,7 +79,6 @@ function DuckShootSign() {
             "0 4px 12px rgba(0,0,0,0.3), inset 0 2px 8px rgba(255,255,255,0.15)",
         }}
       >
-        {/* Inner text area */}
         <div className="text-center px-2">
           <p className="font-carnival text-electric-yellow text-sm sm:text-lg m-0 leading-tight drop-shadow-[2px_2px_0_var(--color-toon-shadow)]">
             DUCK
@@ -86,7 +88,6 @@ function DuckShootSign() {
           </p>
         </div>
       </div>
-      {/* Rope hangers */}
       <div className="absolute -top-3 left-[calc(50%-30px)] w-1.5 h-4 bg-tent-canvas/60 rounded-full" />
       <div className="absolute -top-3 left-[calc(50%+30px)] w-1.5 h-4 bg-tent-canvas/60 rounded-full" />
     </div>
@@ -104,11 +105,10 @@ function ChalkboardTickets({ tickets }: { tickets: number }) {
   );
 }
 
-/** Duck shot counter shelf — 3 duck icons, used ones greyed out */
-function DuckPickShelf({ used, total }: { used: number; total: number }) {
+/** Shot counter shelf — 3 duck icons, used ones greyed out */
+function ShotCounter({ used, total }: { used: number; total: number }) {
   return (
     <div className="flex items-center gap-2 sm:gap-3">
-      {/* Mini wooden shelf base */}
       <div className="flex items-center gap-1.5 bg-wood-horizontal rounded-sm px-3 py-1.5 border-toon shadow-[3px_3px_0_var(--color-toon-shadow)]">
         {Array.from({ length: total }, (_, i) => {
           const isUsed = i < used;
@@ -125,7 +125,6 @@ function DuckPickShelf({ used, total }: { used: number; total: number }) {
             </span>
           );
         })}
-        {/* Label */}
         <span className="font-toon text-tent-canvas/70 text-xs ml-1 hidden sm:inline">
           SHOTS
         </span>
@@ -134,78 +133,79 @@ function DuckPickShelf({ used, total }: { used: number; total: number }) {
   );
 }
 
-/** Water ripples — expanding concentric circles inside the pond */
-function WaterRipples() {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
-      {[0, 2, 4, 6, 8].map((delay, i) => (
-        <div
-          key={i}
-          className="
-            absolute left-1/2 top-1/2
-            w-20 h-20 rounded-full
-            border-2 border-tent-canvas/15
-          "
-          style={{
-            animation: `water-ripple ${8 + i * 1.5}s ease-out ${delay * 0.8}s infinite`,
-            marginLeft: `${(i - 2) * 15}px`,
-            marginTop: `${(i % 3) * 12 - 10}px`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-/** Individual duck on the pond */
+/** Individual metal duck on the track */
 function DuckItem({
   duck,
   posX,
   posY,
-  rotation,
-  bobDelay,
+  driftDuration,
+  driftDelay,
   onClick,
   disabled,
 }: {
   duck: Duck;
   posX: number;
   posY: number;
-  rotation: number;
-  bobDelay: number;
+  driftDuration: number;
+  driftDelay: number;
   onClick: () => void;
   disabled: boolean;
 }) {
   const isPicked = duck.picked;
   const isRevealed = duck.revealed;
   const isIdle = !isPicked && !isRevealed;
+  const isWobbling = isPicked && !isRevealed;
+  const fallDir = duck.fallDir;
 
   if (isRevealed) {
-    // Revealed state: ticket value bubble rising
+    // Revealed: fallen duck on its side showing ticket value
     return (
       <div
         className="absolute pointer-events-none select-none"
         style={{
           left: `${posX}%`,
           top: `${posY}%`,
-          transform: "translate(-50%, -50%)",
+          transform: `translate(-50%, -50%) rotate(${fallDir * 75}deg)`,
         }}
       >
-        {/* Bubble with ticket value */}
+        {/* Fallen metal duck body */}
         <div
-          className="
-            flex items-center justify-center
-            bg-tent-canvas/90 rounded-full
-            border-2 border-electric-yellow
-            px-2 py-0.5
-            shadow-[0_2px_8px_rgba(0,0,0,0.2)]
-          "
+          className="relative w-14 h-10 sm:w-16 sm:h-11"
           style={{
-            animation: "bubble-rise 1.2s ease-out forwards",
+            background: "linear-gradient(180deg, #C0C0C0 0%, #A8A8A8 40%, #808090 100%)",
+            borderRadius: "40% 40% 40% 40%",
+            border: "3px solid var(--color-toon-shadow)",
+            boxShadow: "3px 3px 0 var(--color-toon-shadow)",
           }}
         >
-          <span className="font-carnival text-ink text-xs whitespace-nowrap">
-            +{duck.value} 🎟️
-          </span>
+          {/* Duck head area (still visible on its side) */}
+          <div
+            className="absolute"
+            style={{
+              top: "15%",
+              left: fallDir === 1 ? "70%" : "5%",
+              width: "14px",
+              height: "14px",
+              background: "linear-gradient(135deg, #FFD700 0%, #E6C200 100%)",
+              borderRadius: "50%",
+              border: "2px solid var(--color-toon-shadow)",
+            }}
+          />
+          {/* Ticket value bubble */}
+          <div
+            className="
+              absolute -top-6 left-1/2 -translate-x-1/2
+              flex items-center justify-center
+              bg-tent-canvas/90 rounded-full
+              border-2 border-electric-yellow
+              px-2 py-0.5
+              shadow-[0_2px_8px_rgba(0,0,0,0.2)]
+            "
+          >
+            <span className="font-carnival text-ink text-xs whitespace-nowrap">
+              +{duck.value} 🎟️
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -225,138 +225,118 @@ function DuckItem({
       style={{
         left: `${posX}%`,
         top: `${posY}%`,
-        transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+        transform: "translate(-50%, -50%)",
       }}
       aria-label={
         isRevealed
           ? `Duck worth ${duck.value} ticket${duck.value > 1 ? "s" : ""}`
           : isPicked
-            ? "Picked duck, revealing..."
-            : "Mystery duck — tap to pick"
+            ? "Hit duck, falling..."
+            : "Metal duck — tap to shoot"
       }
     >
-      {/* Ripple burst from pick point */}
-      {isPicked && !isRevealed && (
-        <>
-          <div
-            className="
-              absolute left-1/2 top-1/2
-              w-4 h-4 rounded-full border-2 border-sky-pop/60
-              pointer-events-none
-            "
-            style={{
-              animation: "ripple-burst 0.8s ease-out forwards",
-            }}
-          />
-          <div
-            className="
-              absolute left-1/2 top-1/2
-              w-4 h-4 rounded-full border-2 border-tent-canvas/30
-              pointer-events-none
-            "
-            style={{
-              animation: "ripple-burst 0.8s ease-out 0.15s forwards",
-            }}
-          />
-        </>
-      )}
-
-      {/* Splash droplets */}
-      {isPicked && !isRevealed && (
-        <>
-          <span
-            className="absolute left-1/2 top-1/2 z-10 w-2 h-2 rounded-full bg-sky-pop/60 pointer-events-none"
-            style={{
-              animation: "splash-droplet 0.4s ease-out forwards",
-              "--sx": "-14px",
-              "--sy": "-10px",
-            } as React.CSSProperties}
-          />
-          <span
-            className="absolute left-1/2 top-1/2 z-10 w-1.5 h-1.5 rounded-full bg-sky-pop/50 pointer-events-none"
-            style={{
-              animation: "splash-droplet 0.4s ease-out 0.05s forwards",
-              "--sx": "12px",
-              "--sy": "-8px",
-            } as React.CSSProperties}
-          />
-          <span
-            className="absolute left-1/2 top-1/2 z-10 w-1.5 h-1.5 rounded-full bg-tent-canvas/50 pointer-events-none"
-            style={{
-              animation: "splash-droplet 0.35s ease-out 0.08s forwards",
-              "--sx": "-8px",
-              "--sy": "-14px",
-            } as React.CSSProperties}
-          />
-          <span
-            className="absolute left-1/2 top-1/2 z-10 w-1 h-1 rounded-full bg-electric-yellow/60 pointer-events-none"
-            style={{
-              animation: "splash-droplet 0.38s ease-out 0.03s forwards",
-              "--sx": "6px",
-              "--sy": "-12px",
-            } as React.CSSProperties}
-          />
-        </>
-      )}
-
-      {/* Duck body */}
+      {/* Wobble + fall wrapper */}
       <div
-        className={`
-          relative w-14 h-14 sm:w-16 sm:h-16
-          ${isIdle ? "animate-wiggle" : ""}
-          ${isPicked ? "pointer-events-none" : ""}
-        `}
+        className="relative"
         style={{
           ...(isIdle
             ? {
-                animationName: "duck-dip",
-                animationDuration: `${3.5 + bobDelay * 0.4}s`,
-                animationTimingFunction: "ease-in-out",
-                animationIterationCount: "infinite",
-                animationDelay: `${bobDelay * 0.6}s`,
+                animation: `duck-drift-track ${driftDuration}s ease-in-out ${driftDelay}s infinite alternate`,
               }
             : {}),
-          ...(isPicked && !isRevealed
+          ...(isWobbling
             ? {
-                animation: "duck-sink 0.35s ease-in forwards",
-              }
-            : {}),
-          ...(isRevealed && !isPicked
-            ? {
-                animation: "duck-emerge 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
-              }
+                animation: "duck-hit-wobble 0.2s ease-out forwards, duck-fall-over 0.35s cubic-bezier(0.34,1.56,0.64,1) 0.2s forwards",
+                "--fall-dir": fallDir,
+              } as React.CSSProperties
             : {}),
         }}
       >
-        {/* Duck shape — yellow blob with eye and beak */}
+        {/* Metal duck body — silver/grey with golden head */}
         <div
-          className="
-            w-full h-full bg-electric-yellow rounded-blob
-            border-toon toon-shadow
-            flex items-center justify-center
-            relative
-          "
-          style={{
-            boxShadow: "4px 4px 0 var(--color-toon-shadow)",
-          }}
+          className="relative w-16 h-10 sm:w-18 sm:h-11 flex items-center"
         >
-          {/* Eye */}
-          <div className="w-3 h-3.5 bg-tent-canvas rounded-full absolute top-[28%] left-[28%] flex items-center justify-center">
-            <div className="w-1.5 h-1.5 bg-ink rounded-full" />
-          </div>
-          {/* Beak */}
+          {/* Duck body */}
           <div
-            className="
-              absolute top-[38%] -right-[4px]
-              w-0 h-0
-              border-t-[5px] border-t-transparent
-              border-b-[5px] border-b-transparent
-              border-l-[9px]
-            "
-            style={{ borderLeftColor: "var(--color-tangerine)" }}
+            className="relative w-full h-full overflow-visible"
+            style={{
+              background: "linear-gradient(180deg, #D4D4D4 0%, #B0B0B0 35%, #909098 100%)",
+              borderRadius: "35% 45% 40% 35%",
+              border: "3px solid var(--color-toon-shadow)",
+              boxShadow: "4px 4px 0 var(--color-toon-shadow), inset 0 2px 4px rgba(255,255,255,0.4)",
+            }}
+          >
+            {/* Metallic sheen/highlight */}
+            <div
+              className="absolute rounded-full"
+              style={{
+                width: "10px",
+                height: "6px",
+                top: "8px",
+                left: "10px",
+                background: "rgba(255,255,255,0.55)",
+                filter: "blur(1px)",
+              }}
+            />
+            {/* Duck head — bright yellow */}
+            <div
+              className="absolute"
+              style={{
+                top: "-8px",
+                right: "-4px",
+                width: "18px",
+                height: "16px",
+                background: "linear-gradient(135deg, #FFE600 0%, #FFD700 50%, #E6C200 100%)",
+                borderRadius: "50%",
+                border: "2px solid var(--color-toon-shadow)",
+              }}
+            >
+              {/* Eye */}
+              <div
+                className="absolute w-2 h-2.5 bg-tent-canvas rounded-full flex items-center justify-center"
+                style={{ top: "3px", left: "3px" }}
+              >
+                <div className="w-1 h-1 bg-ink rounded-full" />
+              </div>
+              {/* Beak */}
+              <div
+                className="absolute w-0 h-0"
+                style={{
+                  top: "5px",
+                  right: "-6px",
+                  borderTop: "3px solid transparent",
+                  borderBottom: "3px solid transparent",
+                  borderLeft: "6px solid var(--color-tangerine)",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Track connector / base */}
+          <div
+            className="absolute bottom-[-4px] left-[15%] right-[15%] h-[3px] rounded-full"
+            style={{
+              background: "linear-gradient(90deg, #999, #CCC, #999)",
+            }}
           />
         </div>
       </div>
+
+      {/* Impact spark — brief flash on hit */}
+      {isWobbling && (
+        <div
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+          style={{
+            width: "6px",
+            height: "6px",
+            background: "radial-gradient(circle, #FFF 0%, #FFD700 50%, transparent 100%)",
+            borderRadius: "50%",
+            animation: "particle-burst 0.3s ease-out forwards",
+            "--px": "0px",
+            "--py": "0px",
+          } as React.CSSProperties}
+        />
+      )}
     </button>
   );
 }
@@ -369,12 +349,12 @@ function DuckPond() {
   const [gameState, setGameState] = useState<GameState>("playing");
   const [totalReward, setTotalReward] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-  /** Track which ducks are in their "sinking" (picked, not yet revealed) phase */
-  const [sinkingIds, setSinkingIds] = useState<Set<number>>(new Set());
+  const [wobblingIds, setWobblingIds] = useState<Set<number>>(new Set());
 
   const { tickets, earnTickets } = useTickets();
   const { awardPrize } = usePrizes();
   const { triggerTransition } = useSceneTransition();
+  const { playSfx, playMusic, setTempo, stopMusic } = useSound();
   const navigate = useNavigate();
 
   const paidForSession = useRef(false);
@@ -387,15 +367,24 @@ function DuckPond() {
 
   // ── Curtain exit via scene context ──
   const exitToMidway = useCallback(() => {
+    stopMusic();
     triggerTransition(() => {
       navigate({ to: "/" });
     });
-  }, [triggerTransition, navigate]);
+  }, [triggerTransition, navigate, stopMusic]);
+
+  // ── Music on mount ──
+  useEffect(() => {
+    playMusic("duck-pond");
+    return () => {
+      setTempo(1.0);
+    };
+  }, [playMusic, setTempo]);
 
   // ── Swipe-down gesture ──
   useSwipeGesture(mainRef, exitToMidway, 80);
 
-  // ── Award tickets and a prize once when the game finishes ──
+  // ── Award tickets + prize once when the game finishes ──
   useEffect(() => {
     if (gameState === "finished" && !paidForSession.current) {
       paidForSession.current = true;
@@ -405,23 +394,23 @@ function DuckPond() {
       if (reward > 0) {
         earnTickets(reward);
       }
+      playSfx("ticket");
       awardedPrizeRef.current = awardPrize();
-      // Trigger confetti after a tiny delay so the overlay renders first
+      playSfx("prize");
+      playSfx("fanfare");
       setTimeout(() => setShowConfetti(true), 100);
     }
-  }, [gameState, ducks, earnTickets, awardPrize]);
+  }, [gameState, ducks, earnTickets, awardPrize, playSfx]);
 
-  // ── Stable random rotations for each duck position ──
-  const [rotations] = useState<number[]>(() =>
-    Array.from({ length: DUCK_COUNT }, () => (Math.random() - 0.5) * 20),
+  // ── Stable drift durations and delays for each duck ──
+  const [driftDurations] = useState<number[]>(() =>
+    Array.from({ length: DUCK_COUNT }, () => 3.5 + Math.random() * 2.5),
+  );
+  const [driftDelays] = useState<number[]>(() =>
+    Array.from({ length: DUCK_COUNT }, () => Math.random() * 3),
   );
 
-  // ── Bob delays for staggered bobbing ──
-  const [bobDelays] = useState<number[]>(() =>
-    Array.from({ length: DUCK_COUNT }, () => Math.random() * 5),
-  );
-
-  // ── Handle duck tap ──
+  // ── Handle duck tap (shoot) ──
   const handleDuckClick = useCallback(
     (id: number) => {
       if (gameStateRef.current !== "playing") return;
@@ -438,8 +427,11 @@ function DuckPond() {
 
       if (duckValue === 0) return;
 
-      // Mark as sinking for animation
-      setSinkingIds((prev) => new Set(prev).add(id));
+      // Play metallic tink sound
+      playSfx("tink");
+
+      // Mark as wobbling
+      setWobblingIds((prev) => new Set(prev).add(id));
 
       picksLeftRef.current -= 1;
       setPicksLeft(picksLeftRef.current);
@@ -451,11 +443,11 @@ function DuckPond() {
 
       const currentGen = generationRef.current;
 
-      // 300ms tension delay, then reveal
+      // After wobble (200ms) + fall (350ms) = 550ms, reveal value
       setTimeout(() => {
         if (generationRef.current !== currentGen) return;
 
-        setSinkingIds((prev) => {
+        setWobblingIds((prev) => {
           const next = new Set(prev);
           next.delete(id);
           return next;
@@ -464,9 +456,9 @@ function DuckPond() {
           prev.map((d) => (d.id === id ? { ...d, revealed: true } : d)),
         );
         setTotalReward((prev) => prev + duckValue);
-      }, 300);
+      }, 550);
     },
-    [],
+    [playSfx],
   );
 
   // ── Play again ──
@@ -477,14 +469,13 @@ function DuckPond() {
     setGameState("playing");
     setTotalReward(0);
     setShowConfetti(false);
-    setSinkingIds(new Set());
+    setWobblingIds(new Set());
     picksLeftRef.current = TOTAL_PICKS;
     gameStateRef.current = "playing";
     paidForSession.current = false;
     awardedPrizeRef.current = null;
   }, []);
 
-  // Individual duck values for the result display
   const pickedDucks = useMemo(
     () => ducks.filter((d) => d.picked),
     [ducks],
@@ -515,7 +506,7 @@ function DuckPond() {
         <div className="absolute bottom-1 left-4 right-4 h-px bg-tent-canvas/10" />
       </div>
 
-      {/* Back wall — blue-striped tent fabric (sky-pop + deep-purple) */}
+      {/* Back wall — blue-striped tent fabric */}
       <div
         className="absolute inset-0 z-0 animate-tent-stripe-wave"
         style={{
@@ -556,23 +547,23 @@ function DuckPond() {
         EXIT &rarr;
       </button>
 
-      {/* ═══ CENTER AREA: SIGN + POND ═══ */}
+      {/* ═══ CENTER AREA: SIGN + METAL TRACK ═══ */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-dvh px-3 pt-14 pb-28">
         {/* Duck Shoot Sign */}
         <DuckShootSign />
 
-        {/* Pond Basin — built into the floor */}
+        {/* Metal Track — shooting gallery trough */}
         <div className="relative w-full max-w-md mx-auto">
-          {/* Outer wooden rim (slightly larger than pond) */}
+          {/* Outer wooden frame */}
           <div
             className="
               relative mx-auto
-              rounded-[45%] border-[8px] sm:border-[10px]
+              rounded-xl border-[6px] sm:border-[8px]
               shadow-[0_4px_16px_rgba(0,0,0,0.5),inset_0_2px_8px_rgba(0,0,0,0.3)]
             "
             style={{
-              width: "92%",
-              aspectRatio: "1 / 1.1",
+              width: "94%",
+              aspectRatio: "1 / 0.75",
               borderColor: "var(--color-wood-dark)",
               background: `linear-gradient(180deg,
                 var(--color-wood-light) 0%,
@@ -583,34 +574,77 @@ function DuckPond() {
                 "0 4px 16px rgba(0,0,0,0.5), inset 0 2px 8px rgba(0,0,0,0.3), 6px 6px 0 var(--color-toon-shadow)",
             }}
           >
-            {/* Inner water surface */}
+            {/* Metal channel / track */}
             <div
-              className="
-                absolute inset-2 sm:inset-3
-                rounded-[42%]
-                overflow-hidden
-              "
+              className="absolute inset-3 sm:inset-4 rounded-lg overflow-hidden"
               style={{
-                backgroundColor: "#0D3B66",
-                background:
-                  "radial-gradient(ellipse at 40% 30%, #1A6B8A 0%, #0D3B66 50%, #092A45 100%)",
-                boxShadow: "inset 0 0 40px rgba(0,0,0,0.4)",
+                background: `linear-gradient(180deg,
+                  #B8B8C0 0%,
+                  #D0D0D8 8%,
+                  #A0A0A8 15%,
+                  #C8C8D0 40%,
+                  #909098 70%,
+                  #787880 85%,
+                  #686870 100%
+                )`,
+                boxShadow: "inset 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.3)",
               }}
             >
-              {/* Water ripples */}
-              <WaterRipples />
+              {/* Track grooves / rails */}
+              <div
+                className="absolute left-0 right-0 h-[3px]"
+                style={{
+                  top: "32%",
+                  background: "linear-gradient(90deg, #999 0%, #CCC 50%, #999 100%)",
+                  boxShadow: "0 1px 0 rgba(255,255,255,0.2), 0 2px 0 rgba(0,0,0,0.3)",
+                }}
+              />
+              <div
+                className="absolute left-0 right-0 h-[3px]"
+                style={{
+                  top: "66%",
+                  background: "linear-gradient(90deg, #999 0%, #CCC 50%, #999 100%)",
+                  boxShadow: "0 1px 0 rgba(255,255,255,0.2), 0 2px 0 rgba(0,0,0,0.3)",
+                }}
+              />
 
-              {/* Ducks scattered on pond */}
+              {/* Ducks on the metal track */}
               {ducks.map((duck, i) => (
                 <DuckItem
                   key={duck.id}
                   duck={duck}
                   posX={DUCK_POSITIONS[i].x}
                   posY={DUCK_POSITIONS[i].y}
-                  rotation={rotations[i]}
-                  bobDelay={bobDelays[i]}
+                  driftDuration={driftDurations[i]}
+                  driftDelay={driftDelays[i]}
                   onClick={() => handleDuckClick(duck.id)}
                   disabled={gameState !== "playing"}
+                />
+              ))}
+
+              {/* Track rivets on the sides */}
+              {[10, 30, 50, 70, 90].map((pct) => (
+                <div
+                  key={pct}
+                  className="absolute w-1.5 h-1.5 rounded-full"
+                  style={{
+                    left: `${pct}%`,
+                    top: "10%",
+                    background: "radial-gradient(circle, #CCC 0%, #888 100%)",
+                    boxShadow: "0 1px 1px rgba(0,0,0,0.3)",
+                  }}
+                />
+              ))}
+              {[15, 35, 55, 75, 95].map((pct) => (
+                <div
+                  key={pct}
+                  className="absolute w-1.5 h-1.5 rounded-full"
+                  style={{
+                    left: `${pct}%`,
+                    top: "85%",
+                    background: "radial-gradient(circle, #CCC 0%, #888 100%)",
+                    boxShadow: "0 1px 1px rgba(0,0,0,0.3)",
+                  }}
                 />
               ))}
             </div>
@@ -620,16 +654,14 @@ function DuckPond() {
 
       {/* ═══ WOODEN COUNTER (bottom) ═══ */}
       <div className="absolute bottom-0 left-0 right-0 z-20">
-        {/* Counter top edge */}
         <div className="h-3 sm:h-4 bg-wood-horizontal border-t-2 border-toon-shadow" />
-        {/* Counter face */}
         <div
           className="bg-wood pt-2 pb-4 px-4 sm:px-6 flex items-center justify-center gap-4"
           style={{
             borderTop: "3px solid var(--color-wood-light)",
           }}
         >
-          <DuckPickShelf used={usedPicks} total={TOTAL_PICKS} />
+          <ShotCounter used={usedPicks} total={TOTAL_PICKS} />
           <div className="text-tent-canvas/40 font-toon text-xs hidden sm:block">
             · · · take a shot · · ·
           </div>
@@ -648,7 +680,6 @@ function DuckPond() {
               You won {totalReward} 🎟️!
             </h2>
 
-            {/* Individual duck reveals */}
             <div className="flex flex-wrap justify-center gap-2 mt-1">
               {pickedDucks.map((d) => (
                 <span
@@ -664,7 +695,6 @@ function DuckPond() {
               ))}
             </div>
 
-            {/* Prize reveal with spotlight */}
             {awardedPrizeRef.current && (
               <div
                 className="relative mt-2 mb-1 px-6 py-3 rounded-bounce animate-bounce-in border-toon"

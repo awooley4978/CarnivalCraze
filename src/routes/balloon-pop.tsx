@@ -25,14 +25,15 @@ const TOTAL_DARTS = 3;
 const BALLOON_COUNT = 6;
 
 // ── Types ─────────────────────────────────────────
-type BalloonPhase = "idle" | "resisting" | "bursting" | "popped";
+type BalloonPhase = "idle" | "stretching" | "bursting" | "popped";
 
-interface Particle {
+interface ShredParticle {
   id: number;
-  angle: number; // radians
-  distance: number; // px
+  angle: number;
+  distance: number;
   color: string;
-  size: number; // px
+  size: number;
+  rotation: number;
 }
 
 interface Balloon {
@@ -42,7 +43,7 @@ interface Balloon {
   phase: BalloonPhase;
   offsetX: number;
   offsetY: number;
-  particles: Particle[];
+  shreds: ShredParticle[];
 }
 
 type GameState = "playing" | "won" | "lost";
@@ -66,18 +67,19 @@ function generateBalloons(): Balloon[] {
     phase: "idle" as BalloonPhase,
     offsetX: (Math.random() - 0.5) * 12,
     offsetY: (Math.random() - 0.5) * 10,
-    particles: [],
+    shreds: [],
   }));
 }
 
-function generateParticles(color: string): Particle[] {
+function generateShreds(color: string): ShredParticle[] {
   const count = 4 + Math.floor(Math.random() * 3); // 4–6
   return Array.from({ length: count }, (_, i) => ({
     id: i,
     angle: (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.6,
-    distance: 20 + Math.random() * 40, // 20–60px
+    distance: 25 + Math.random() * 45,
     color,
-    size: 4 + Math.random() * 5, // 4–9px
+    size: 5 + Math.random() * 6,
+    rotation: Math.random() * 360,
   }));
 }
 
@@ -133,7 +135,6 @@ function DartDisplay({ used, total }: { used: number; total: number }) {
             title={isUsed ? "Used dart" : "Ready dart"}
           >
             🎯
-            {/* Pushpin illusion when used — a dark line across */}
             {isUsed && (
               <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-wood-dark rounded-full" />
             )}
@@ -148,15 +149,13 @@ function DartDisplay({ used, total }: { used: number; total: number }) {
 function Pushpin() {
   return (
     <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center">
-      {/* Pin head */}
       <div className="w-2.5 h-2.5 rounded-full bg-[#C0C0C0] border border-[#808080] shadow-sm" />
-      {/* Pin shaft */}
       <div className="w-0.5 h-2 bg-[#808080]" />
     </div>
   );
 }
 
-/** Individual balloon with resistance + burst animation */
+/** Individual balloon with stretch-resistance + pop */
 function BalloonItem({
   balloon,
   isNearWin,
@@ -169,7 +168,7 @@ function BalloonItem({
   disabled: boolean;
 }) {
   const isIdle = balloon.phase === "idle";
-  const isResisting = balloon.phase === "resisting";
+  const isStretching = balloon.phase === "stretching";
   const isBursting = balloon.phase === "bursting";
   const isPopped = balloon.phase === "popped";
 
@@ -187,77 +186,109 @@ function BalloonItem({
         select-none outline-none border-none bg-transparent p-0
         ${isIdle ? "cursor-pointer" : "cursor-default"}
       `}
-      style={{
-        width: undefined,
-        height: undefined,
-      }}
     >
-      {/* Particles (rendered even before burst, but invisible) */}
+      {/* Shred particles — visible during burst phase */}
       {isBursting &&
-        balloon.particles.map((p) => (
+        balloon.shreds.map((p) => (
           <div
             key={p.id}
-            className="absolute z-20 rounded-full pointer-events-none"
+            className="absolute z-20 pointer-events-none"
             style={{
               width: `${p.size}px`,
-              height: `${p.size}px`,
+              height: `${p.size * 0.7}px`,
               backgroundColor: p.color,
+              borderRadius: "40% 60% 30% 50%",
               left: "50%",
               top: "40%",
-              animation: "particle-burst 0.4s ease-out forwards",
+              animation: "particle-shred 0.45s ease-out forwards",
               "--px": `${Math.cos(p.angle) * p.distance}px`,
               "--py": `${Math.sin(p.angle) * p.distance}px`,
+              transform: `rotate(${p.rotation}deg)`,
             } as React.CSSProperties}
           />
         ))}
 
-      {/* Balloon body */}
+      {/* Balloon body — teardrop shape */}
       <div
         className={`
           relative
           w-16 h-20 sm:w-20 sm:h-24
-          rounded-blob border-toon
+          border-toon
           flex items-center justify-center
           shadow-[4px_4px_0_var(--color-toon-shadow)]
           ${balloon.twClass}
           ${isIdle ? (isNearWin ? "animate-wiggle" : "animate-wiggle") : ""}
         `}
         style={{
+          // Teardrop/oval balloon shape
+          borderRadius: "50% 50% 50% 50% / 40% 40% 60% 60%",
           transform: `translate(${balloon.offsetX}px, ${balloon.offsetY}px)`,
           ...(isIdle && isNearWin
-            ? { animationDuration: "0.25s" } // 1.5× speed = shorter duration
+            ? { animationDuration: "0.25s" }
             : {}),
-          ...(isResisting
+          ...(isStretching
             ? {
-                animation: "balloon-resist 0.15s ease-out forwards",
+                animation: "balloon-stretch-pop 0.35s ease-out forwards",
                 transform: `translate(${balloon.offsetX}px, ${balloon.offsetY}px)`,
               }
             : {}),
           ...(isBursting
             ? {
-                animation: "balloon-pop-scale 0.25s cubic-bezier(0.36,0,0.66,1) forwards",
+                animation: "balloon-stretch-pop 0.35s ease-out forwards",
                 transform: `translate(${balloon.offsetX}px, ${balloon.offsetY}px)`,
               }
             : {}),
         }}
       >
-        {/* Shine / highlight */}
-        <div className="w-3 h-3 bg-white/40 rounded-full absolute top-2 left-2.5 sm:top-3 sm:left-3" />
+        {/* Specular highlight — curved reflection on the balloon surface */}
+        <div
+          className="absolute rounded-full pointer-events-none"
+          style={{
+            width: "30%",
+            height: "40%",
+            top: "12%",
+            left: "18%",
+            background:
+              "radial-gradient(ellipse at 40% 30%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 50%, transparent 100%)",
+            transform: "rotate(-15deg)",
+          }}
+        />
+        {/* Secondary small highlight dot */}
+        <div
+          className="absolute w-2 h-2.5 rounded-full bg-white/50 pointer-events-none"
+          style={{
+            top: "25%",
+            left: "45%",
+          }}
+        />
       </div>
 
-      {/* Knot triangle */}
+      {/* Tied knot at bottom */}
       <div
-        className={`
-          w-0 h-0
-          border-l-[5px] border-r-[5px] border-t-[6px]
-          border-l-transparent border-r-transparent
-          -mt-[1px]
-        `}
+        className="relative -mt-[1px]"
         style={{
-          borderTopColor: "var(--color-toon-shadow)",
           ...(isBursting ? { opacity: 0, transition: "opacity 0.2s" } : {}),
         }}
-      />
+      >
+        {/* Knot body — small oval */}
+        <div
+          className="w-3 h-2 mx-auto rounded-full"
+          style={{
+            backgroundColor: balloon.hexColor,
+            border: "2px solid var(--color-toon-shadow)",
+            filter: "brightness(0.7)",
+          }}
+        />
+        {/* Knot tail — tiny triangle pointing down */}
+        <div
+          className="w-0 h-0 mx-auto
+            border-l-[3px] border-r-[3px] border-t-[4px]
+            border-l-transparent border-r-transparent"
+          style={{
+            borderTopColor: "var(--color-toon-shadow)",
+          }}
+        />
+      </div>
 
       {/* Pushpin at top */}
       <Pushpin />
@@ -311,7 +342,6 @@ function BalloonPop() {
       awardedPrizeRef.current = awardPrize();
       playSfx("prize");
       playSfx("fanfare");
-      // Trigger confetti after a tiny delay so the overlay renders first
       setTimeout(() => setShowConfetti(true), 100);
     }
   }, [gameState, earnTickets, awardPrize, playSfx]);
@@ -331,14 +361,17 @@ function BalloonPop() {
       const balloon = balloons.find((b) => b.id === id);
       if (!balloon || balloon.phase !== "idle") return;
 
-      // Phase 1: resistance
+      // Phase 1: stretch (the balloon gives resistance)
       setBalloons((prev) =>
         prev.map((b) =>
-          b.id === id ? { ...b, phase: "resisting" as BalloonPhase } : b,
+          b.id === id ? { ...b, phase: "stretching" as BalloonPhase } : b,
         ),
       );
 
-      // Phase 2: burst after 150ms
+      // Play dart throw sound immediately
+      playSfx("dart_throw");
+
+      // Phase 2: burst after 200ms (stretch animation plays first)
       setTimeout(() => {
         const newDarts = dartsLeft - 1;
         const poppedBefore = balloons.filter(
@@ -349,15 +382,18 @@ function BalloonPop() {
 
         setBalloons((prev) => {
           const target = prev.find((b) => b.id === id);
-          if (!target || target.phase !== "resisting") return prev;
+          if (!target || target.phase !== "stretching") return prev;
 
-          const particles = generateParticles(target.hexColor);
+          const shreds = generateShreds(target.hexColor);
           return prev.map((b) =>
             b.id === id
-              ? { ...b, phase: "bursting" as BalloonPhase, particles }
+              ? { ...b, phase: "bursting" as BalloonPhase, shreds }
               : b,
           );
         });
+
+        // Play loud pop sound
+        playSfx("pop");
 
         if (poppedBefore + 1 >= BALLOON_COUNT) {
           setGameState("won");
@@ -370,14 +406,14 @@ function BalloonPop() {
           setBalloons((prev) =>
             prev.map((b) =>
               b.id === id
-                ? { ...b, phase: "popped" as BalloonPhase, particles: [] }
+                ? { ...b, phase: "popped" as BalloonPhase, shreds: [] }
                 : b,
             ),
           );
-        }, 300);
-      }, 150);
+        }, 400);
+      }, 200);
     },
-    [balloons, dartsLeft, gameState],
+    [balloons, dartsLeft, gameState, playSfx],
   );
 
   // ── Play again ──
@@ -399,7 +435,6 @@ function BalloonPop() {
     dartsLeft === 1 &&
     balloons.some((b) => b.phase === "idle");
 
-  // Confetti colors from the balloon palette
   const confettiColors = useMemo(
     () => BALLOON_DEFS.map((d) => d.hex),
     [],
@@ -425,7 +460,6 @@ function BalloonPop() {
             "linear-gradient(180deg, #0D0517 0%, #1A0A2E 60%, transparent 100%)",
         }}
       >
-        {/* Subtle fold lines */}
         <div className="absolute bottom-1 left-4 right-4 h-px bg-tent-canvas/10" />
       </div>
 
@@ -519,9 +553,7 @@ function BalloonPop() {
 
       {/* ═══ WOODEN COUNTER (bottom) ═══ */}
       <div className="absolute bottom-0 left-0 right-0 z-20">
-        {/* Counter top edge */}
         <div className="h-3 sm:h-4 bg-wood-horizontal border-t-2 border-toon-shadow" />
-        {/* Counter face */}
         <div
           className="bg-wood pt-2 pb-4 px-4 sm:px-6 flex items-center justify-center gap-4"
           style={{
@@ -550,7 +582,6 @@ function BalloonPop() {
               +2 🎟️
             </p>
 
-            {/* Prize reveal with spotlight */}
             {awardedPrizeRef.current && (
               <div
                 className="relative mt-2 mb-1 px-6 py-3 rounded-bounce animate-bounce-in border-toon"
