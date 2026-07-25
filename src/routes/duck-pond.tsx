@@ -58,16 +58,16 @@ const WATER_COLORS = ["#00BFFF", "#FFE600", "#39FF14", "#7B2D8E", "#1A8FC0", "#4
 
 // ── Sub-Components ──────────────────────────────────
 
-/** Life-preserver sign hanging above the pond */
-function LifePreserverSign() {
+/** Life-preserver sign hanging above the track */
+function DuckShootSign() {
   return (
     <div className="relative mx-auto mb-3 flex items-center justify-center" aria-hidden>
-      {/* Ring */}
+      {/* Ring — redesigned as a shooting gallery sign */}
       <div
         className="
           relative w-28 h-28 sm:w-36 sm:h-36 rounded-full
-          border-[6px] sm:border-[8px] border-tent-canvas
-          bg-circus-red/30
+          border-[6px] sm:border-[8px] border-electric-yellow
+          bg-circus-red/40
           flex items-center justify-center
           shadow-[0_4px_12px_rgba(0,0,0,0.3)]
         "
@@ -79,10 +79,10 @@ function LifePreserverSign() {
         {/* Inner text area */}
         <div className="text-center px-2">
           <p className="font-carnival text-electric-yellow text-sm sm:text-lg m-0 leading-tight drop-shadow-[2px_2px_0_var(--color-toon-shadow)]">
-            PICK A
+            DUCK
           </p>
           <p className="font-carnival text-electric-yellow text-sm sm:text-lg m-0 leading-tight drop-shadow-[2px_2px_0_var(--color-toon-shadow)]">
-            DUCK!
+            SHOOT
           </p>
         </div>
       </div>
@@ -104,7 +104,7 @@ function ChalkboardTickets({ tickets }: { tickets: number }) {
   );
 }
 
-/** Duck pick counter shelf — 3 duck icons, used ones greyed out */
+/** Duck shot counter shelf — 3 duck icons, used ones greyed out */
 function DuckPickShelf({ used, total }: { used: number; total: number }) {
   return (
     <div className="flex items-center gap-2 sm:gap-3">
@@ -119,7 +119,7 @@ function DuckPickShelf({ used, total }: { used: number; total: number }) {
                 text-xl sm:text-2xl select-none transition-all duration-300 inline-block
                 ${isUsed ? "opacity-30 grayscale scale-90 rotate-12" : "opacity-100"}
               `}
-              title={isUsed ? "Picked" : "Available pick"}
+              title={isUsed ? "Shot taken" : "Available shot"}
             >
               🦆
             </span>
@@ -127,7 +127,7 @@ function DuckPickShelf({ used, total }: { used: number; total: number }) {
         })}
         {/* Label */}
         <span className="font-toon text-tent-canvas/70 text-xs ml-1 hidden sm:inline">
-          PICKS
+          SHOTS
         </span>
       </div>
     </div>
@@ -558,8 +558,8 @@ function DuckPond() {
 
       {/* ═══ CENTER AREA: SIGN + POND ═══ */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-dvh px-3 pt-14 pb-28">
-        {/* Life-preserver sign */}
-        <LifePreserverSign />
+        {/* Duck Shoot Sign */}
+        <DuckShootSign />
 
         {/* Pond Basin — built into the floor */}
         <div className="relative w-full max-w-md mx-auto">
@@ -631,7 +631,7 @@ function DuckPond() {
         >
           <DuckPickShelf used={usedPicks} total={TOTAL_PICKS} />
           <div className="text-tent-canvas/40 font-toon text-xs hidden sm:block">
-            · · · pick a duck · · ·
+            · · · take a shot · · ·
           </div>
         </div>
       </div>

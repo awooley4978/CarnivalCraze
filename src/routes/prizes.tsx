@@ -7,23 +7,33 @@ import { useSound } from "~/context/SoundContext";
 import { useSwipeGesture } from "~/hooks/useSwipeGesture";
 
 export const Route = createFileRoute("/prizes")({
-  component: TrophyRoom,
+  component: PrizeShack,
 });
 
-// ── Helpers ───────────────────────────────────────────────
+// ── Prize emoji mapping ────────────────────────────────────
+const PRIZE_EMOJI_MAP: Record<string, string> = {
+  "Giant Teddy Bear": "🧸",
+  "Plush Dragon": "🐉",
+  "Alien Keychain": "👽",
+  "Oversized Trophy": "🏆",
+  "Inflatable Unicorn": "🦄",
+  "Mini Carnival Tent": "🎪",
+  "Glow-in-the-Dark Star": "⭐",
+  "Clown Nose": "🤡",
+};
 
-/** Distribute prizes across 3 rows evenly (row 1 = closest, row 3 = deepest) */
-function distributePrizes(prizes: string[]): [string[], string[], string[]] {
-  const total = prizes.length;
-  if (total === 0) return [[], [], []];
-  const perRow = Math.ceil(total / 3);
-  const row1 = prizes.slice(0, perRow);
-  const row2 = prizes.slice(perRow, perRow * 2);
-  const row3 = prizes.slice(perRow * 2);
-  return [row1, row2, row3];
+/** Extract emoji from prize string (fallback to random from map) */
+function prizeEmoji(prize: string): string {
+  // Try prefix match in map
+  for (const [key, emoji] of Object.entries(PRIZE_EMOJI_MAP)) {
+    if (prize.includes(key)) return emoji;
+  }
+  // Fallback: extract first two chars if they look like emoji
+  const firstTwo = prize.slice(0, 2);
+  return firstTwo || "🎁";
 }
 
-/** Seed-based "random" for consistent per-prize variation without re-renders */
+/** Seed-based random for consistent layout */
 function seededRandom(seed: number): number {
   const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
   return x - Math.floor(x);
@@ -31,7 +41,7 @@ function seededRandom(seed: number): number {
 
 // ── Sub-components ────────────────────────────────────────
 
-/** Mini bulb string decoration across the top of the room */
+/** Mini bulb string decoration across the top */
 function BulbString() {
   const bulbs = useMemo(
     () =>
@@ -39,13 +49,13 @@ function BulbString() {
         lit: i % 3 !== 1,
         delayClass: `delay-bulb-${(i % 10) + 1}`,
         doubleBlink: i === 3 || i === 8 || i === 12,
+        flicker: i === 5 || i === 14,
       })),
     [],
   );
 
   return (
     <div className="relative w-full flex justify-between items-center px-2 py-3">
-      {/* Wire */}
       <div className="absolute top-1/2 left-2 right-2 h-0.5 bg-bulb-off/60 -translate-y-1/2 rounded-full" />
       {bulbs.map((bulb, i) => (
         <div
@@ -53,20 +63,29 @@ function BulbString() {
           className={`
             h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full flex-shrink-0
             ${bulb.lit ? "bg-bulb-gold glow-bulb" : "bg-bulb-off"}
-            ${bulb.doubleBlink ? "animate-blink-bulb-double" : "animate-blink-bulb"}
+            ${bulb.doubleBlink ? "animate-blink-bulb-double" : bulb.flicker ? "" : "animate-blink-bulb"}
             ${bulb.delayClass}
           `}
+          style={
+            bulb.flicker && bulb.lit
+              ? {
+                  animation: `bulb-flicker ${2.5 + i * 0.3}s step-end ${i * 0.05}s infinite`,
+                  background: "var(--color-bulb-gold)",
+                  boxShadow:
+                    "0 0 8px 3px var(--color-bulb-gold), 0 0 20px 6px rgba(255, 215, 0, 0.5), 0 0 40px 10px rgba(255, 215, 0, 0.25)",
+                }
+              : undefined
+          }
         />
       ))}
     </div>
   );
 }
 
-/** Hanging sign: "🏆 TROPHY ROOM 🏆" */
+/** Hanging sign: "PRIZE SHACK" */
 function HangingSign() {
   return (
     <div className="relative mx-auto mb-1">
-      {/* Sign body */}
       <div
         className="
           bg-wood-horizontal border-toon rounded-bounce
@@ -76,10 +95,9 @@ function HangingSign() {
         "
       >
         <h1 className="font-carnival text-electric-yellow text-xl sm:text-3xl m-0 text-center leading-tight select-none">
-          🏆 TROPHY ROOM 🏆
+          🏆 PRIZE SHACK 🏆
         </h1>
       </div>
-      {/* Hanging ropes from ceiling */}
       <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-0.5 h-5 bg-tent-canvas/40 rounded-full" />
       <div className="absolute -top-4 left-[calc(50%-28px)] w-0.5 h-4 bg-tent-canvas/30 rounded-full" />
       <div className="absolute -top-4 left-[calc(50%+28px)] w-0.5 h-4 bg-tent-canvas/30 rounded-full" />
@@ -117,7 +135,96 @@ function ChalkboardTickets({ tickets }: { tickets: number }) {
   );
 }
 
-/** Dust mote — tiny floating particle in a spotlight beam */
+/** A single wooden shelf with prizes on it */
+function Shelf({
+  yPercent,
+  prizes,
+  shelfIndex,
+}: {
+  yPercent: number;
+  prizes: string[];
+  shelfIndex: number;
+}) {
+  const hasPrizes = prizes.length > 0;
+
+  return (
+    <div
+      className="absolute left-[4%] right-[4%]"
+      style={{ top: `${yPercent}%` }}
+    >
+      {/* Shelf bracket / support */}
+      <div
+        className="absolute -bottom-1.5 left-[8%]"
+        style={{
+          width: 5,
+          height: 8,
+          background: "var(--color-toon-shadow)",
+          borderRadius: "1px",
+          opacity: 0.6,
+        }}
+      />
+      <div
+        className="absolute -bottom-1.5 right-[8%]"
+        style={{
+          width: 5,
+          height: 8,
+          background: "var(--color-toon-shadow)",
+          borderRadius: "1px",
+          opacity: 0.6,
+        }}
+      />
+
+      {/* Shelf board */}
+      <div
+        className="w-full h-2.5 sm:h-3 relative"
+        style={{
+          background: "linear-gradient(180deg, #8B5E3C, var(--color-wood-dark))",
+          borderRadius: "2px",
+          border: "2px solid var(--color-toon-shadow)",
+          boxShadow: "3px 3px 0 var(--color-toon-shadow)",
+        }}
+      />
+
+      {/* Prizes on the shelf */}
+      {hasPrizes && (
+        <div
+          className="absolute -top-9 sm:-top-11 left-0 right-0 flex justify-center flex-wrap gap-1 sm:gap-1.5 px-2"
+          style={{ flexWrap: "wrap", alignItems: "flex-end" }}
+        >
+          {prizes.map((prize, i) => {
+            const emoji = prizeEmoji(prize);
+            const wiggleDelay = seededRandom(shelfIndex * 10 + i) * 3;
+            const scale = 0.85 + seededRandom(shelfIndex * 7 + i) * 0.3;
+            return (
+              <span
+                key={`${shelfIndex}-${i}`}
+                className="text-2xl sm:text-3xl select-none inline-block leading-none"
+                style={{
+                  transform: `scale(${scale}) rotate(${(seededRandom(shelfIndex * 13 + i) - 0.5) * 8}deg)`,
+                  filter: "drop-shadow(2px 2px 0 var(--color-toon-shadow))",
+                  animation: `wiggle 0.4s ease-in-out ${wiggleDelay}s infinite`,
+                }}
+                title={prize}
+              >
+                {emoji}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Cobwebs for empty shelves */}
+      {!hasPrizes && (
+        <div className="absolute -top-7 left-0 right-0 flex justify-center gap-4" aria-hidden>
+          <span className="text-tent-canvas/10 text-xs select-none">🕸️</span>
+          <span className="text-tent-canvas/10 text-xs select-none">🕸️</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Dust mote — tiny floating particle */
 function DustMote({
   index,
   left,
@@ -127,9 +234,9 @@ function DustMote({
   left: number;
   top: number;
 }) {
-  const duration = 3 + seededRandom(index * 7) * 4; // 3–7s
-  const delay = seededRandom(index * 13) * 5; // 0–5s
-  const size = 1.5 + seededRandom(index * 17) * 2.5; // 1.5–4px
+  const duration = 4 + seededRandom(index * 7) * 5;
+  const delay = seededRandom(index * 13) * 6;
+  const size = 1.5 + seededRandom(index * 17) * 2.5;
 
   return (
     <div
@@ -147,149 +254,14 @@ function DustMote({
   );
 }
 
-/** Spotlight cone over a pedestal */
-function Spotlight({
-  variant = "full",
-  swayDelay = 0,
-}: {
-  variant?: "full" | "dim" | "faint";
-  swayDelay?: number;
-}) {
-  const coneClass =
-    variant === "faint"
-      ? "spotlight-cone-faint"
-      : variant === "dim"
-        ? "spotlight-cone-dim"
-        : "spotlight-cone";
-
-  return (
-    <div
-      className={`
-        absolute inset-0 animate-spotlight-sway ${coneClass}
-      `}
-      style={{
-        animationDelay: `${swayDelay}s`,
-      }}
-      aria-hidden
-    />
-  );
-}
-
-/** Single pedestal with prize emoji on top */
-function Pedestal({
-  prize,
-  index,
-  depth,
-}: {
-  prize: string;
-  index: number;
-  depth: number;
-}) {
-  const emoji = prize.slice(0, 2);
-  const name = prize.slice(3);
-
-  // Scale down deeper pedestals
-  const scale = depth === 3 ? 0.72 : depth === 2 ? 0.85 : 1;
-  const isRare = prize.includes("🌟") || prize.includes("🏆");
-
-  return (
-    <div
-      className="flex flex-col items-center select-none flex-shrink-0 mx-4 sm:mx-6"
-      style={{ transform: `scale(${scale})`, transformOrigin: "bottom center" }}
-    >
-      {/* Prize emoji */}
-      <div
-        className={`
-          relative flex items-center justify-center
-          text-[3.5rem] sm:text-[4.5rem] leading-none
-          animate-wiggle z-10
-          mb-0.5
-          ${isRare ? "animate-sparkle-prize" : ""}
-        `}
-        style={{
-          filter: isRare
-            ? "drop-shadow(0 0 14px var(--color-prize-sparkle)) drop-shadow(3px 3px 0 var(--color-toon-shadow))"
-            : "drop-shadow(3px 3px 0 var(--color-toon-shadow))",
-        }}
-      >
-        {emoji}
-
-        {/* Prize name label */}
-        <div
-          className="
-            absolute -bottom-5 left-1/2 -translate-x-1/2
-            bg-ink/80 border border-toon-shadow/30 rounded-bounce
-            px-2 py-0.5
-            whitespace-nowrap
-          "
-          style={{ transform: `scale(${1 / scale})` }}
-        >
-          <span className="font-toon text-tent-canvas text-[0.6rem] sm:text-xs leading-tight">
-            {name}
-          </span>
-        </div>
-      </div>
-
-      {/* Spotlight cone behind the prize */}
-      <div className="absolute w-40 h-56 sm:w-48 sm:h-64 -z-10 top-0 pointer-events-none">
-        <Spotlight
-          variant={depth === 3 ? "faint" : depth === 2 ? "dim" : "full"}
-          swayDelay={index * 1.1}
-        />
-      </div>
-
-      {/* Pedestal top platform */}
-      <div className="pedestal-top w-20 sm:w-24 h-3 sm:h-4 relative z-10 mt-1" />
-
-      {/* Pedestal column */}
-      <div className="pedestal-column w-10 sm:w-12 h-12 sm:h-16 relative z-10" />
-
-      {/* Pedestal base */}
-      <div className="pedestal-base w-24 sm:w-28 h-3 sm:h-4 relative z-10" />
-    </div>
-  );
-}
-
-/** A row of pedestals at a specific depth with parallax scroll */
-function PedestalRow({
-  prizes,
-  depth,
-}: {
-  prizes: string[];
-  depth: number;
-}) {
-  if (prizes.length === 0) return null;
-
-  return (
-    <div
-      className="flex items-end justify-start pb-0"
-      style={{
-        // Depth-appropriate spacing and margin
-        marginTop: depth === 3 ? "0.5rem" : depth === 2 ? "1rem" : "1.5rem",
-        paddingLeft: depth === 3 ? "6rem" : depth === 2 ? "3rem" : "0.5rem",
-        paddingRight: "4rem",
-      }}
-    >
-      {prizes.map((prize, i) => (
-        <Pedestal
-          key={`d${depth}-${i}`}
-          prize={prize}
-          index={i}
-          depth={depth}
-        />
-      ))}
-    </div>
-  );
-}
-
-/** Empty state: dark room, single spotlight, floating dust */
+/** Empty state: dark room with dusty shelves and cobwebs */
 function EmptyState() {
   const dustMotes = useMemo(
     () =>
-      Array.from({ length: 20 }, (_, i) => ({
+      Array.from({ length: 18 }, (_, i) => ({
         id: i,
-        left: 30 + seededRandom(i * 3) * 40, // 30–70%
-        top: 20 + seededRandom(i * 5) * 60, // 20–80%
+        left: 15 + seededRandom(i * 3) * 70,
+        top: 10 + seededRandom(i * 5) * 70,
         index: i,
       })),
     [],
@@ -297,19 +269,17 @@ function EmptyState() {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center relative">
-      {/* Single spotlight cone */}
-      <div className="absolute w-64 h-80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-        <Spotlight variant="full" />
-      </div>
+      {/* Single spotlight cone in center */}
+      <div
+        className="absolute w-56 h-64 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none spotlight-cone-dim"
+        style={{ animation: "spotlight-sway 6s ease-in-out infinite", transformOrigin: "top center" }}
+      />
 
-      {/* Empty pedestal */}
-      <div className="flex flex-col items-center relative z-10">
-        <div className="text-[5rem] sm:text-[6rem] opacity-20 select-none mb-0.5">
-          ❓
-        </div>
-        <div className="pedestal-top w-20 sm:w-24 h-3 sm:h-4 relative z-10" />
-        <div className="pedestal-column w-10 sm:w-12 h-12 sm:h-16 relative z-10" />
-        <div className="pedestal-base w-24 sm:w-28 h-3 sm:h-4 relative z-10" />
+      {/* Empty shelves with cobwebs */}
+      <div className="relative w-full max-w-sm h-48 my-2">
+        <Shelf yPercent={15} prizes={[]} shelfIndex={99} />
+        <Shelf yPercent={45} prizes={[]} shelfIndex={100} />
+        <Shelf yPercent={75} prizes={[]} shelfIndex={101} />
       </div>
 
       {/* Dust motes */}
@@ -323,70 +293,47 @@ function EmptyState() {
       ))}
 
       {/* Message */}
-      <p className="font-toon text-tent-canvas/50 text-base sm:text-lg mt-8 select-none z-10">
+      <p className="font-toon text-tent-canvas/50 text-base sm:text-lg mt-6 select-none z-10">
         No prizes yet… go win some!
       </p>
     </div>
   );
 }
 
-/** Arrow indicator when scrollable */
-function ScrollArrows({
-  canScrollLeft,
-  canScrollRight,
-  onScrollLeft,
-  onScrollRight,
-}: {
-  canScrollLeft: boolean;
-  canScrollRight: boolean;
-  onScrollLeft: () => void;
-  onScrollRight: () => void;
-}) {
+/** Filled state: shelves packed with prizes */
+function FilledShelves({ prizes }: { prizes: string[] }) {
+  // Distribute prizes across 4 shelves
+  const shelves = useMemo(() => {
+    const total = prizes.length;
+    const shelfCount = 4;
+    const perShelf = Math.max(1, Math.ceil(total / shelfCount));
+    const result: string[][] = Array.from({ length: shelfCount }, () => []);
+    prizes.forEach((prize, i) => {
+      const shelfIdx = Math.min(Math.floor(i / perShelf), shelfCount - 1);
+      result[shelfIdx].push(prize);
+    });
+    return result;
+  }, [prizes]);
+
+  const shelfYPositions = [18, 38, 58, 78];
+
   return (
-    <>
-      {canScrollLeft && (
-        <button
-          type="button"
-          onClick={onScrollLeft}
-          className="
-            absolute left-1 top-1/2 -translate-y-1/2 z-30
-            w-9 h-9 sm:w-10 sm:h-10
-            rounded-full bg-ink/60 border border-tent-canvas/20
-            flex items-center justify-center
-            text-tent-canvas/70 hover:text-tent-canvas hover:bg-ink/80
-            active:scale-90 transition-all
-            cursor-pointer select-none
-          "
-          aria-label="Scroll left"
-        >
-          ◀
-        </button>
-      )}
-      {canScrollRight && (
-        <button
-          type="button"
-          onClick={onScrollRight}
-          className="
-            absolute right-1 top-1/2 -translate-y-1/2 z-30
-            w-9 h-9 sm:w-10 sm:h-10
-            rounded-full bg-ink/60 border border-tent-canvas/20
-            flex items-center justify-center
-            text-tent-canvas/70 hover:text-tent-canvas hover:bg-ink/80
-            active:scale-90 transition-all
-            cursor-pointer select-none
-          "
-          aria-label="Scroll right"
-        >
-          ▶
-        </button>
-      )}
-    </>
+    <div className="flex-1 relative px-2 pt-2 pb-4">
+      {shelves.map((shelfPrizes, i) => (
+        <Shelf
+          key={i}
+          yPercent={shelfYPositions[i]}
+          prizes={shelfPrizes}
+          shelfIndex={i}
+        />
+      ))}
+    </div>
   );
 }
 
 // ── Main Component ────────────────────────────────────────
 
-function TrophyRoom() {
+function PrizeShack() {
   const { prizes } = usePrizes();
   const { tickets } = useTickets();
   const { triggerTransition } = useSceneTransition();
@@ -395,27 +342,14 @@ function TrophyRoom() {
 
   const isEmpty = prizes.length === 0;
 
-  // Distribute prizes across 3 rows
-  const [row1, row2, row3] = useMemo(() => distributePrizes(prizes), [prizes]);
-
-  // ── Scroll state for arrows & parallax ──
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const row1Ref = useRef<HTMLDivElement>(null);
-  const row2Ref = useRef<HTMLDivElement>(null);
-  const row3Ref = useRef<HTMLDivElement>(null);
-
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  // ── Curtain rise entrance animation ──
+  // Curtain rise entrance animation
   const [curtainRisen, setCurtainRisen] = useState(false);
   useEffect(() => {
-    // Small delay so the SceneTransition curtains are done opening first
     const t = setTimeout(() => setCurtainRisen(true), 200);
     return () => clearTimeout(t);
   }, []);
 
-  // ── Music ──
+  // Music
   useEffect(() => {
     playMusic("trophy");
     return () => {
@@ -423,57 +357,7 @@ function TrophyRoom() {
     };
   }, [playMusic, stopMusic]);
 
-  // ── Scroll arrow state ──
-  const updateScrollState = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 4);
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    updateScrollState();
-    el.addEventListener("scroll", updateScrollState, { passive: true });
-    return () => el.removeEventListener("scroll", updateScrollState);
-  }, [updateScrollState, prizes]);
-
-  // ── Parallax on scroll ──
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const scrollLeft = el.scrollLeft;
-
-    if (row2Ref.current) {
-      row2Ref.current.style.transform = `translateX(${-scrollLeft * 0.3}px)`;
-    }
-    if (row3Ref.current) {
-      row3Ref.current.style.transform = `translateX(${-scrollLeft * 0.6}px)`;
-    }
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || isEmpty) return;
-    el.addEventListener("scroll", handleScroll, { passive: true });
-    // Initial call
-    handleScroll();
-    return () => el.removeEventListener("scroll", handleScroll);
-  }, [handleScroll, isEmpty]);
-
-  // ── Arrow button handlers ──
-  const scrollBy = useCallback((dir: "left" | "right") => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const amount = Math.min(el.clientWidth * 0.7, 400);
-    el.scrollBy({
-      left: dir === "left" ? -amount : amount,
-      behavior: "smooth",
-    });
-  }, []);
-
-  // ── Exit to midway ──
+  // Exit to midway
   const exitToMidway = useCallback(() => {
     stopMusic();
     triggerTransition(() => {
@@ -481,7 +365,7 @@ function TrophyRoom() {
     });
   }, [triggerTransition, navigate, stopMusic]);
 
-  // ── Swipe-down gesture ──
+  // Swipe-down gesture
   const mainRef = useRef<HTMLElement>(null);
   useSwipeGesture(mainRef, exitToMidway, 80);
 
@@ -492,25 +376,29 @@ function TrophyRoom() {
     >
       {/* ═══ ROOM BACKDROP ═══ */}
 
-      {/* Back wall — tent stripes */}
-      <div className="absolute inset-0 bottom-[25%] z-0">
-        {/* Subtle striped tent pattern on the back wall */}
+      {/* Back wall — carnival tent stripes */}
+      <div className="absolute inset-0 bottom-[20%] z-0">
+        {/* Bold tent stripes on the walls */}
         <div
-          className="absolute inset-0 opacity-[0.07]"
+          className="absolute inset-0 opacity-[0.12]"
           style={{
             background: `repeating-linear-gradient(
               90deg,
-              var(--color-circus-red) 0px,
-              var(--color-circus-red) 60px,
-              var(--color-tent-canvas) 60px,
-              var(--color-tent-canvas) 120px
+              var(--color-deep-purple) 0px,
+              var(--color-deep-purple) 48px,
+              var(--color-hot-magenta) 48px,
+              var(--color-hot-magenta) 56px,
+              var(--color-tent-canvas) 56px,
+              var(--color-tent-canvas) 64px,
+              var(--color-deep-purple) 64px,
+              var(--color-deep-purple) 112px
             )`,
           }}
         />
         {/* Tent fold lines */}
-        <div className="absolute top-0 left-[20%] bottom-0 w-px bg-tent-canvas/[0.04]" />
-        <div className="absolute top-0 left-[50%] bottom-0 w-px bg-tent-canvas/[0.04]" />
-        <div className="absolute top-0 left-[80%] bottom-0 w-px bg-tent-canvas/[0.04]" />
+        <div className="absolute top-0 left-[18%] bottom-0 w-px bg-tent-canvas/[0.05]" />
+        <div className="absolute top-0 left-[52%] bottom-0 w-px bg-tent-canvas/[0.05]" />
+        <div className="absolute top-0 left-[78%] bottom-0 w-px bg-tent-canvas/[0.05]" />
         {/* Ceiling dark gradient */}
         <div
           className="absolute top-0 left-0 right-0 h-16 sm:h-20 z-10"
@@ -521,23 +409,23 @@ function TrophyRoom() {
         />
       </div>
 
-      {/* Wooden floor with perspective */}
+      {/* Wooden floor */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-[25%] z-0"
+        className="absolute bottom-0 left-0 right-0 h-[20%] z-0"
         style={{
           background: `
             linear-gradient(
               to bottom,
               rgba(26, 10, 46, 0.2) 0%,
-              rgba(26, 10, 46, 0.6) 40%,
-              rgba(26, 10, 46, 1) 100%
+              rgba(26, 10, 46, 0.5) 30%,
+              rgba(26, 10, 46, 0.9) 100%
             ),
             repeating-linear-gradient(
               0deg,
               transparent 0px,
-              transparent 14px,
-              rgba(0, 0, 0, 0.25) 14px,
-              rgba(0, 0, 0, 0.25) 15px
+              transparent 16px,
+              rgba(0, 0, 0, 0.3) 16px,
+              rgba(0, 0, 0, 0.3) 17px
             ),
             linear-gradient(
               180deg,
@@ -546,8 +434,7 @@ function TrophyRoom() {
               #2A1508 100%
             )
           `,
-          // Perspective: floor lines converge toward center
-          clipPath: "polygon(10% 0%, 90% 0%, 100% 100%, 0% 100%)",
+          clipPath: "polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%)",
         }}
       />
 
@@ -568,56 +455,7 @@ function TrophyRoom() {
         </div>
 
         {/* Main room area */}
-        {isEmpty ? (
-          <EmptyState />
-        ) : (
-          <div className="flex-1 relative flex flex-col justify-end pb-4">
-            {/* Scroll arrows */}
-            <ScrollArrows
-              canScrollLeft={canScrollLeft}
-              canScrollRight={canScrollRight}
-              onScrollLeft={() => scrollBy("left")}
-              onScrollRight={() => scrollBy("right")}
-            />
-
-            {/* Horizontal scroll container */}
-            <div
-              ref={scrollRef}
-              className="
-                overflow-x-auto overflow-y-hidden
-                scroll-snap-x-mandatory
-                flex-shrink-0
-                pb-2
-                [scrollbar-width:none] [-ms-overflow-style:none]
-                [&::-webkit-scrollbar]:hidden
-              "
-              style={{
-                scrollSnapType: "x mandatory",
-              }}
-            >
-              {/* Parallax rows — deepest first (rendered behind) */}
-              <div className="relative w-max min-w-full flex flex-col">
-                {/* Row 3: deepest (parallax 0.4×, rendered in JS at -0.6× on container scroll) */}
-                <div ref={row3Ref} className="relative" style={{ willChange: "transform" }}>
-                  <PedestalRow prizes={row3} depth={3} />
-                </div>
-
-                {/* Row 2: middle (parallax 0.7×, rendered in JS at -0.3×) */}
-                <div ref={row2Ref} className="relative" style={{ willChange: "transform" }}>
-                  <PedestalRow prizes={row2} depth={2} />
-                </div>
-
-                {/* Row 1: closest (parallax 1.0×, no JS translate needed — natural scroll) */}
-                <div ref={row1Ref} className="relative">
-                  <PedestalRow prizes={row1} depth={1} />
-                </div>
-              </div>
-            </div>
-
-            {/* Floor edge line */}
-            <div className="h-1.5 sm:h-2 bg-wood-horizontal border-t-2 border-toon-shadow flex-shrink-0" />
-          </div>
-        )}
+        {isEmpty ? <EmptyState /> : <FilledShelves prizes={prizes} />}
 
         {/* ═══ DIEGETIC UI ELEMENTS ═══ */}
 
@@ -642,7 +480,7 @@ function TrophyRoom() {
           EXIT &rarr;
         </button>
 
-        {/* Swipe-down hint (bottom center, subtle) */}
+        {/* Swipe-down hint */}
         {!isEmpty && (
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none">
             <span className="font-toon text-tent-canvas/25 text-[0.65rem] sm:text-xs animate-bob-float">
