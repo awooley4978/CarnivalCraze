@@ -357,3 +357,38 @@
   0% { transform: translateX(0); }
   100% { transform: translateX(100%); }
 }
+
+/* ═══════════════════════════════════════════════════
+   11. BOB-FLOAT
+   Gentle bobbing up/down for floating elements — balloons,
+   duck silhouettes, drifting motes.
+   Duration: 3–5s | Easing: ease-in-out | Infinite
+   ═══════════════════════════════════════════════════ */
+@keyframes bob-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-8px);
+  }
+  60% {
+    transform: translateY(4px);
+  }
+  85% {
+    transform: translateY(-2px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   12. PULSE-STAR
+   Twinkling stars — opacity pulse with slight scale.
+   Duration: 2–4s | Easing: ease-in-out | Infinite
+   ═══════════════════════════════════════════════════ */
+@keyframes pulse-star {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}

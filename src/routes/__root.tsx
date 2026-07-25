@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 
 import { TicketProvider } from "~/context/TicketContext";
 import { PrizeProvider } from "~/context/PrizeContext";
+import { SceneProvider, useSceneTransition } from "~/context/SceneContext";
 import BulbMarquee from "~/components/BulbMarquee";
 import TicketCounter from "~/components/TicketCounter";
 import SceneTransition from "~/components/SceneTransition";
@@ -61,9 +62,11 @@ function RootComponent() {
   return (
     <TicketProvider>
       <PrizeProvider>
-        <RootDocument>
-          <Outlet />
-        </RootDocument>
+        <SceneProvider>
+          <RootDocument>
+            <Outlet />
+          </RootDocument>
+        </SceneProvider>
       </PrizeProvider>
     </TicketProvider>
   );
@@ -77,9 +80,7 @@ function RootDocument({ children }: { children: ReactNode }) {
       </head>
       <body>
         <BulbMarquee />
-        <SceneTransition isOpen={true}>
-          {children}
-        </SceneTransition>
+        <SceneTransitionWrapper>{children}</SceneTransitionWrapper>
         <TicketCounter />
         <Scripts />
         {/* Service Worker registration for PWA */}
@@ -96,5 +97,22 @@ function RootDocument({ children }: { children: ReactNode }) {
         />
       </body>
     </html>
+  );
+}
+
+/** Inner component that consumes SceneContext for dynamic transition state */
+function SceneTransitionWrapper({ children }: { children: ReactNode }) {
+  const { isTransitioning, consumeDarkCallback } = useSceneTransition();
+
+  return (
+    <SceneTransition
+      isOpen={!isTransitioning}
+      onDark={() => {
+        const cb = consumeDarkCallback();
+        cb?.();
+      }}
+    >
+      {children}
+    </SceneTransition>
   );
 }

@@ -5,18 +5,22 @@ type TransitionPhase = "open" | "closing" | "dark" | "opening";
 interface SceneTransitionProps {
   isOpen: boolean;
   onTransitionEnd?: () => void;
+  onDark?: () => void;
   children: ReactNode;
 }
 
 export default function SceneTransition({
   isOpen,
   onTransitionEnd,
+  onDark,
   children,
 }: SceneTransitionProps) {
   const [phase, setPhase] = useState<TransitionPhase>("open");
   const prevIsOpen = useRef(isOpen);
   const onTransitionEndRef = useRef(onTransitionEnd);
   onTransitionEndRef.current = onTransitionEnd;
+  const onDarkRef = useRef(onDark);
+  onDarkRef.current = onDark;
 
   useEffect(() => {
     if (isOpen === prevIsOpen.current) return;
@@ -25,7 +29,10 @@ export default function SceneTransition({
     // Sequence: close curtains → dark pause → open curtains
     setPhase("closing");
 
-    const darkTimer = setTimeout(() => setPhase("dark"), 400);
+    const darkTimer = setTimeout(() => {
+      setPhase("dark");
+      onDarkRef.current?.();
+    }, 400);
     const openTimer = setTimeout(() => setPhase("opening"), 600);
     const doneTimer = setTimeout(() => {
       setPhase("open");
