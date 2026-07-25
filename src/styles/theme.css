@@ -50,6 +50,17 @@
   --color-prize-sparkle: #E0FF00;    /* electric lime — for free play / rare prizes */
   --color-toon-shadow: #1A002E;      /* deepest purple-black for cartoon drop-shadows */
 
+  /* ── Booth Interiors & Materials ── */
+  --color-tent-balloon: #CC1A1A;     /* deep crimson for Balloon Pop tent */
+  --color-chalkboard: #2A4A3A;       /* dark green chalkboard */
+  --color-chalk: #D4E8D0;            /* chalk text (pale green-white) */
+  --color-wood-dark: #3E2210;        /* dark wood */
+  --color-wood-light: #7A4F2B;       /* light wood accent */
+  --color-cork: #C4A265;             /* corkboard tan */
+  --color-cork-dark: #A0824A;        /* corkboard border */
+  --color-win-glow: #FFE600;         /* warm golden win glow */
+  --color-lose-dim: #3A1A4E;         /* muted purple lose state */
+
   /* ═══════════════════════════════════════════════
      TYPOGRAPHY
      ═══════════════════════════════════════════════ */
@@ -183,5 +194,62 @@
     box-shadow: 4px 4px 0 var(--color-toon-shadow);
     display: inline-block;
     text-align: center;
+  }
+
+  /* Chalkboard surface — dark green with wood frame */
+  .bg-chalkboard {
+    background: var(--color-chalkboard);
+    border: 4px solid var(--color-wood-dark);
+    box-shadow: inset 2px 2px 8px rgba(0, 0, 0, 0.4);
+    border-radius: 0.25rem;
+  }
+
+  /* Chalk text style */
+  .text-chalk {
+    color: var(--color-chalk);
+    font-family: var(--font-toon);
+    letter-spacing: 0.03em;
+  }
+
+  /* Vertical wood grain gradient */
+  .bg-wood {
+    background: linear-gradient(
+      180deg,
+      var(--color-wood-light) 0%,
+      var(--color-wood-dark) 100%
+    );
+  }
+
+  /* Horizontal wood grain gradient */
+  .bg-wood-horizontal {
+    background: linear-gradient(
+      90deg,
+      var(--color-wood-dark) 0%,
+      var(--color-wood-light) 25%,
+      var(--color-wood-dark) 50%,
+      var(--color-wood-light) 75%,
+      var(--color-wood-dark) 100%
+    );
+  }
+
+  /* Corkboard texture */
+  .bg-cork {
+    background:
+      radial-gradient(
+        ellipse at 20% 30%,
+        var(--color-cork) 0%,
+        var(--color-cork-dark) 100%
+      );
+  }
+
+  /* Glowing exit sign */
+  .exit-sign {
+    color: var(--color-acid-green);
+    font-family: var(--font-carnival);
+    text-shadow:
+      0 0 8px var(--color-acid-green),
+      0 0 20px rgba(57, 255, 20, 0.5),
+      0 0 40px rgba(57, 255, 20, 0.2);
+    letter-spacing: 0.05em;
   }
 }
