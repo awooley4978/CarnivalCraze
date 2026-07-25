@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useTickets } from "~/context/TicketContext";
+import { usePrizes } from "~/context/PrizeContext";
 
 export const Route = createFileRoute("/balloon-pop")({
   component: BalloonPop,
@@ -54,15 +55,18 @@ function BalloonPop() {
   const [gameState, setGameState] = useState<GameState>("playing");
 
   const { tickets, earnTickets } = useTickets();
+  const { awardPrize } = usePrizes();
   const paidForSession = useRef(false);
+  const awardedPrizeRef = useRef<string | null>(null);
 
-  // Award tickets once when the player wins this session
+  // Award tickets and a prize once when the player wins this session
   useEffect(() => {
     if (gameState === "won" && !paidForSession.current) {
       paidForSession.current = true;
       earnTickets(2);
+      awardedPrizeRef.current = awardPrize();
     }
-  }, [gameState, earnTickets]);
+  }, [gameState, earnTickets, awardPrize]);
 
   const handleBalloonClick = useCallback(
     (id: number) => {
@@ -97,6 +101,7 @@ function BalloonPop() {
     setDartsLeft(TOTAL_DARTS);
     setGameState("playing");
     paidForSession.current = false;
+    awardedPrizeRef.current = null;
   }, []);
 
   const poppedCount = balloons.filter((b) => b.popped).length;
@@ -156,6 +161,11 @@ function BalloonPop() {
                 <p className="font-carnival text-tent-canvas text-xl">
                   +2 🎟️
                 </p>
+                {awardedPrizeRef.current && (
+                  <p className="font-toon text-prize-sparkle text-sm animate-bounce-in glow-prize rounded-bounce px-3 py-1 bg-ink/50">
+                    You won {awardedPrizeRef.current}!
+                  </p>
+                )}
                 <p className="font-toon text-tent-canvas/60 text-sm">
                   Balance: 🎟️ {tickets}
                 </p>
