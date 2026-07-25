@@ -93,7 +93,15 @@ function Home() {
             to="/balloon-pop"
           />
         </div>
-        <div className="animate-bounce-in" style={{ animationDelay: "0.25s" }}>
+        <div className="animate-bounce-in" style={{ animationDelay: "0.2s" }}>
+          <BoothCard
+            emoji="🥛"
+            name="Milk Bottle Toss"
+            cost="3 Tickets"
+            to="/milk-bottle-toss"
+          />
+        </div>
+        <div className="animate-bounce-in" style={{ animationDelay: "0.3s" }}>
           <BoothCard
             emoji="🦆"
             name="Duck Pond"
@@ -101,7 +109,7 @@ function Home() {
             to="/duck-pond"
           />
         </div>
-        <div className="animate-bounce-in sm:col-span-2 flex justify-center" style={{ animationDelay: "0.4s" }}>
+        <div className="animate-bounce-in sm:col-span-2 flex justify-center" style={{ animationDelay: "0.45s" }}>
           <div className="card-booth flex flex-col items-center gap-3 text-center w-full sm:max-w-sm">
             <span className="text-4xl" role="img" aria-label="Prize Shelf">
               🧸
