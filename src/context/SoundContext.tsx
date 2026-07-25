@@ -61,7 +61,7 @@ const MUSIC_TRACKS: Record<string, MusicTrack> = {
       { freq: 349, dur: 1 },
     ],
   },
-  "milk-bottle": {
+  "bottle-bash": {
     bpm: 120,
     notes: [
       { freq: 392, dur: 1 },
