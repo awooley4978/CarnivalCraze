@@ -14,6 +14,19 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Carnival Craze" },
+      // PWA meta tags
+      { name: "theme-color", content: "#1A0A2E" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      {
+        name: "apple-mobile-web-app-status-bar-style",
+        content: "black-translucent",
+      },
+      { name: "apple-mobile-web-app-title", content: "Carnival Craze" },
+      {
+        name: "description",
+        content:
+          "Step right up! Play carnival games and win ridiculous prizes!",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -30,6 +43,9 @@ export const Route = createRootRoute({
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Fredoka:wght@400;500;600;700&display=swap",
       },
+      // PWA manifest and icons
+      { rel: "manifest", href: "/site.webmanifest" },
+      { rel: "apple-touch-icon", href: "/icon-192.png" },
     ],
   }),
   notFoundComponent: () => <div>Page not found</div>,
@@ -53,6 +69,18 @@ function RootDocument({ children }: { children: ReactNode }) {
       <body>
         {children}
         <Scripts />
+        {/* Service Worker registration for PWA */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function() {});
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
