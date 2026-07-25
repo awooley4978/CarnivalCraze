@@ -43,7 +43,7 @@ const BOOTHS: BoothConfig[] = [
     cost: 3,
     signText: "BOTTLE BASH",
     priceText: "4 THROWS — 3 🎟️",
-    emoji: "⚾",
+    emoji: "🍾",
     tentStripeColor: "var(--color-tangerine)",
     tentBaseColor: "var(--color-tent-canvas)",
     bgDecorations: "bottles",
@@ -52,7 +52,7 @@ const BOOTHS: BoothConfig[] = [
     name: "Duck Pond",
     route: "/duck-pond",
     cost: 1,
-    signText: "PICK A DUCK!",
+    signText: "DUCK POND",
     priceText: "3 PICKS — 1 🎟️",
     emoji: "🦆",
     tentStripeColor: "var(--color-sky-pop)",
@@ -61,68 +61,809 @@ const BOOTHS: BoothConfig[] = [
   },
 ];
 
-/* ───────────────────────────────────────────
-   Background Decorations
-   ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   SHARED UTILITIES
+   ═══════════════════════════════════════════════════════ */
 
-function BalloonBg() {
+function RopePost({ side }: { side: "left" | "right" }) {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-      {[
-        { color: "#FF1493", x: 15, y: 20, size: 28, delay: 0 },
-        { color: "#39FF14", x: 70, y: 12, size: 22, delay: 1.2 },
-        { color: "#FF6B1A", x: 40, y: 35, size: 32, delay: 2.4 },
-        { color: "#FFE600", x: 85, y: 28, size: 18, delay: 0.8 },
-        { color: "#FF1493", x: 25, y: 55, size: 20, delay: 3.0 },
-        { color: "#39FF14", x: 55, y: 18, size: 26, delay: 1.8 },
-      ].map((b, i) => (
-        <div
-          key={i}
-          className="absolute rounded-full opacity-25"
-          style={{
-            width: b.size,
-            height: b.size * 1.25,
-            left: `${b.x}%`,
-            top: `${b.y}%`,
-            backgroundColor: b.color,
-            borderRadius: "50% 50% 50% 50% / 40% 40% 60% 60%",
-            animation: `bob-float 4s ease-in-out ${b.delay}s infinite`,
-          }}
-        />
-      ))}
+    <div className="flex flex-col items-center" aria-hidden>
+      <div
+        className="w-2.5 h-12 rounded-sm"
+        style={{
+          background: "linear-gradient(90deg, var(--color-wood-light), var(--color-wood-dark))",
+          border: "1px solid var(--color-toon-shadow)",
+        }}
+      />
+      <div
+        className="w-4 h-4 rounded-full -mt-1"
+        style={{
+          background: "var(--color-bulb-gold)",
+          border: "2px solid var(--color-toon-shadow)",
+          boxShadow: "0 0 6px var(--color-bulb-gold)",
+        }}
+      />
     </div>
   );
 }
 
-function BottleBg() {
+/** Shared night-sky backdrop with stars and distant ferris wheel */
+function NightSkyBackdrop() {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-      {/* Bottle pyramid silhouette */}
-      <div className="absolute left-1/2 top-[20%] -translate-x-1/2 opacity-15">
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex gap-2">
-            <BottleShape />
-            <BottleShape />
-            <BottleShape />
-          </div>
-          <div className="flex gap-2">
-            <BottleShape />
-            <BottleShape />
-          </div>
-          <div className="flex gap-2">
-            <BottleShape />
+    <>
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `linear-gradient(
+            180deg,
+            #0D0524 0%,
+            #1A0A2E 50%,
+            #2D1040 100%
+          )`,
+        }}
+      />
+      {Array.from({ length: 20 }, (_, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full bg-white"
+          style={{
+            width: 1 + (i % 3),
+            height: 1 + (i % 3),
+            left: `${(i * 37 + 13) % 100}%`,
+            top: `${(i * 23 + 7) % 40}%`,
+            opacity: 0.3 + (i % 3) * 0.2,
+            animation: `pulse-star ${2 + (i % 3)}s ease-in-out ${i * 0.3}s infinite`,
+          }}
+        />
+      ))}
+      <div className="absolute right-[5%] top-[15%] opacity-8">
+        <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+          <circle cx="40" cy="40" r="30" stroke="var(--color-deep-purple)" strokeWidth="2" fill="none" opacity="0.15" />
+          <circle cx="40" cy="40" r="2" fill="var(--color-deep-purple)" opacity="0.15" />
+          {[0, 45, 90, 135].map((angle) => (
+            <line
+              key={angle}
+              x1="40" y1="40"
+              x2={40 + 28 * Math.cos((angle * Math.PI) / 180)}
+              y2={40 + 28 * Math.sin((angle * Math.PI) / 180)}
+              stroke="var(--color-deep-purple)"
+              strokeWidth="1"
+              opacity="0.12"
+            />
+          ))}
+        </svg>
+      </div>
+    </>
+  );
+}
+
+/** Shared striped-tent awning for all booths */
+function TentAwning({ stripeColor, baseColor }: { stripeColor: string; baseColor: string }) {
+  return (
+    <div
+      className="relative mx-auto w-[90%] h-full"
+      style={{
+        background: `repeating-linear-gradient(
+          90deg,
+          ${stripeColor} 0px,
+          ${stripeColor} 48px,
+          ${baseColor} 48px,
+          ${baseColor} 96px
+        )`,
+        borderRadius: "50% 50% 0 0 / 8% 8% 0 0",
+        border: "4px solid var(--color-toon-shadow)",
+        borderBottom: "none",
+        boxShadow: "inset 0 -40px 60px rgba(0,0,0,0.3)",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        className="absolute inset-0 animate-tent-stripe-wave opacity-30"
+        style={{
+          background: `repeating-linear-gradient(
+            90deg,
+            transparent 0px,
+            transparent 40px,
+            rgba(255,255,255,0.08) 40px,
+            rgba(255,255,255,0.08) 80px
+          )`,
+        }}
+      />
+      <div
+        className="absolute left-0 top-0 bottom-0 w-8"
+        style={{ background: `linear-gradient(90deg, ${stripeColor}, transparent)` }}
+      />
+      <div
+        className="absolute right-0 top-0 bottom-0 w-8"
+        style={{ background: `linear-gradient(270deg, ${stripeColor}, transparent)` }}
+      />
+    </div>
+  );
+}
+
+/** Shared tent poles (left & right) */
+function TentPoles() {
+  return (
+    <>
+      <div
+        className="absolute left-[8%] top-0 bottom-0 w-2"
+        style={{
+          background: "linear-gradient(90deg, var(--color-ink), var(--color-toon-shadow))",
+          borderRadius: "2px",
+        }}
+      />
+      <div
+        className="absolute right-[8%] top-0 bottom-0 w-2"
+        style={{
+          background: "linear-gradient(90deg, var(--color-toon-shadow), var(--color-ink))",
+          borderRadius: "2px",
+        }}
+      />
+    </>
+  );
+}
+
+/** Shared signage board */
+function BoothSign({ text }: { text: string }) {
+  return (
+    <div
+      className="mb-3 px-6 py-3"
+      style={{
+        background: "linear-gradient(180deg, #3E2210, #7A4F2B)",
+        borderRadius: "var(--radius-bounce)",
+        border: "3px solid var(--color-toon-shadow)",
+        boxShadow: "4px 4px 0 var(--color-toon-shadow)",
+        transform: "rotate(-1.5deg)",
+      }}
+    >
+      <h2
+        className="text-center m-0"
+        style={{
+          fontFamily: "var(--font-carnival)",
+          color: "var(--color-electric-yellow)",
+          fontSize: "clamp(1.3rem, 5vw, 2.2rem)",
+          textShadow: "3px 3px 0 var(--color-toon-shadow)",
+          letterSpacing: "0.03em",
+        }}
+      >
+        {text}
+      </h2>
+    </div>
+  );
+}
+
+/** Shared price chalkboard */
+function PriceChalkboard({ text }: { text: string }) {
+  return (
+    <div
+      className="mb-5 px-4 py-2"
+      style={{
+        background: "#2A4A3A",
+        borderRadius: "8px",
+        border: "3px solid #3E2210",
+        boxShadow: "inset 0 2px 4px rgba(0,0,0,0.4)",
+        transform: "rotate(1deg)",
+      }}
+    >
+      <p
+        className="m-0 text-center"
+        style={{
+          fontFamily: "var(--font-toon)",
+          color: "#D4E8D0",
+          fontSize: "clamp(0.7rem, 2.5vw, 1rem)",
+          fontWeight: 600,
+          letterSpacing: "0.05em",
+        }}
+      >
+        {text}
+      </p>
+    </div>
+  );
+}
+
+/** Shared PLAY button */
+function PlayButton({
+  onClick,
+  insufficient,
+  boothName,
+}: {
+  onClick: () => void;
+  insufficient: boolean;
+  boothName: string;
+}) {
+  return (
+    <>
+      <span
+        className="text-5xl mb-4"
+        style={{ filter: "drop-shadow(3px 3px 0 var(--color-toon-shadow))" }}
+        role="img"
+        aria-label={boothName}
+      >
+        🎪
+      </span>
+      <button
+        type="button"
+        onClick={onClick}
+        className="cursor-pointer select-none"
+        style={{
+          fontFamily: "var(--font-carnival)",
+          background: "var(--color-hot-magenta)",
+          color: "var(--color-tent-canvas)",
+          padding: "0.6rem 2.5rem",
+          borderRadius: "var(--radius-bounce)",
+          border: "3px solid var(--color-toon-shadow)",
+          boxShadow: "5px 5px 0 var(--color-toon-shadow)",
+          fontSize: "clamp(1rem, 4vw, 1.4rem)",
+          letterSpacing: "0.05em",
+          transform: "rotate(0.5deg)",
+          transition: "transform 0.1s ease, box-shadow 0.1s ease",
+        }}
+        onMouseDown={(e) => {
+          e.currentTarget.style.transform = "translate(2px, 2px) rotate(0.5deg)";
+          e.currentTarget.style.boxShadow = "2px 2px 0 var(--color-toon-shadow)";
+        }}
+        onMouseUp={(e) => {
+          e.currentTarget.style.transform = "rotate(0.5deg)";
+          e.currentTarget.style.boxShadow = "5px 5px 0 var(--color-toon-shadow)";
+        }}
+      >
+        PLAY
+      </button>
+      {insufficient && (
+        <div className="mt-3 animate-bounce-in" style={{ animationDuration: "0.6s" }}>
+          <span className="text-4xl block text-center" role="img" aria-label="Not enough tickets">
+            🤡
+          </span>
+          <p
+            className="m-0 text-center"
+            style={{
+              fontFamily: "var(--font-toon)",
+              color: "var(--color-hot-magenta)",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+            }}
+          >
+            Need more tickets!
+          </p>
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Shared welcome mat */
+function WelcomeMat({ accentColor }: { accentColor: string }) {
+  return (
+    <div
+      className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[60%] max-w-[280px] h-3 rounded-sm"
+      style={{
+        background: `repeating-linear-gradient(
+          90deg,
+          ${accentColor} 0px,
+          ${accentColor} 20px,
+          var(--color-tent-canvas) 20px,
+          var(--color-tent-canvas) 40px
+        )`,
+        border: "2px solid var(--color-toon-shadow)",
+        opacity: 0.7,
+      }}
+    />
+  );
+}
+
+/** Shared foreground ground strip with rope posts */
+function GroundStrip({
+  layer4X,
+  accentColor,
+}: {
+  layer4X: number;
+  accentColor: string;
+}) {
+  return (
+    <div
+      className="absolute bottom-0 inset-x-0 h-[18%]"
+      style={{ transform: `translateX(${layer4X}px)` }}
+    >
+      <div className="absolute left-[5%] right-[5%] top-0 flex justify-between">
+        <RopePost side="left" />
+        <RopePost side="right" />
+      </div>
+      <WelcomeMat accentColor={accentColor} />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   BALLOON POP BOOTH SCENE
+   ═══════════════════════════════════════════════════════ */
+
+function HangingBalloon({
+  color,
+  left,
+  delay,
+  size,
+}: {
+  color: string;
+  left: number;
+  delay: number;
+  size: number;
+}) {
+  return (
+    <div
+      className="absolute"
+      style={{
+        left: `${left}%`,
+        top: "5%",
+        width: size,
+        height: size * 1.25,
+        animation: `bob-float 4s ease-in-out ${delay}s infinite`,
+      }}
+      aria-hidden
+    >
+      {/* Balloon body */}
+      <div
+        className="rounded-full"
+        style={{
+          width: size,
+          height: size,
+          backgroundColor: color,
+          borderRadius: "50% 50% 50% 50% / 40% 40% 60% 60%",
+          border: "2px solid var(--color-toon-shadow)",
+          boxShadow: "inset -3px -3px 8px rgba(0,0,0,0.25), inset 2px 2px 6px rgba(255,255,255,0.3)",
+        }}
+      />
+      {/* Knot */}
+      <div
+        className="mx-auto"
+        style={{
+          width: size * 0.2,
+          height: size * 0.15,
+          backgroundColor: color,
+          filter: "brightness(0.7)",
+          borderRadius: "2px",
+        }}
+      />
+      {/* String */}
+      <div
+        className="mx-auto"
+        style={{
+          width: 1.5,
+          height: size * 0.8,
+          background: "var(--color-tent-canvas)",
+          opacity: 0.6,
+        }}
+      />
+    </div>
+  );
+}
+
+function PoppedScrap({ left, top, rotation, color }: { left: number; top: number; rotation: number; color: string }) {
+  return (
+    <div
+      className="absolute"
+      style={{
+        left: `${left}%`,
+        top: `${top}%`,
+        width: 10,
+        height: 7,
+        backgroundColor: color,
+        opacity: 0.5,
+        borderRadius: "2px",
+        transform: `rotate(${rotation}deg)`,
+        border: "1px solid var(--color-toon-shadow)",
+      }}
+      aria-hidden
+    />
+  );
+}
+
+function StuckDart({ left, top, angle }: { left: number; top: number; angle: number }) {
+  return (
+    <div
+      className="absolute"
+      style={{
+        left: `${left}%`,
+        top: `${top}%`,
+        transform: `rotate(${angle}deg)`,
+      }}
+      aria-hidden
+    >
+      {/* Dart shaft */}
+      <div
+        style={{
+          width: 20,
+          height: 2,
+          background: "linear-gradient(90deg, #C0C0C0, #888)",
+          borderRadius: "1px",
+        }}
+      />
+      {/* Dart flight */}
+      <div
+        style={{
+          position: "absolute",
+          right: -6,
+          top: -3,
+          width: 8,
+          height: 8,
+          background: "var(--color-circus-red)",
+          clipPath: "polygon(0 0, 100% 50%, 0 100%)",
+        }}
+      />
+      {/* Dart tip stuck in */}
+      <div
+        className="absolute"
+        style={{
+          left: -3,
+          top: -1,
+          width: 4,
+          height: 4,
+          background: "#888",
+          borderRadius: "50%",
+        }}
+      />
+    </div>
+  );
+}
+
+function BalloonPopBoothScene({
+  booth,
+  index,
+  scrollOffset,
+  viewportWidth,
+  onPlay,
+  showInsufficient,
+}: {
+  booth: BoothConfig;
+  index: number;
+  scrollOffset: number;
+  viewportWidth: number;
+  onPlay: () => void;
+  showInsufficient: boolean;
+}) {
+  const boothCenter = index * viewportWidth;
+  const offset = scrollOffset - boothCenter;
+  const layer1X = offset * 0.2;
+  const layer2X = offset * 0.5;
+  const layer3X = offset * 1.0;
+  const layer4X = offset * 1.2;
+
+  return (
+    <div className="min-w-[100vw] h-dvh relative snap-center overflow-hidden flex-shrink-0">
+      {/* Layer 1: Backdrop */}
+      <div className="absolute inset-0" style={{ transform: `translateX(${layer1X}px)` }}>
+        <NightSkyBackdrop />
+        {/* Floating balloon bg silhouettes */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+          {[
+            { color: "#FF1493", x: 15, y: 20, size: 28, delay: 0 },
+            { color: "#39FF14", x: 70, y: 12, size: 22, delay: 1.2 },
+            { color: "#FF6B1A", x: 40, y: 35, size: 32, delay: 2.4 },
+            { color: "#FFE600", x: 85, y: 28, size: 18, delay: 0.8 },
+            { color: "#FF1493", x: 25, y: 55, size: 20, delay: 3.0 },
+            { color: "#39FF14", x: 55, y: 18, size: 26, delay: 1.8 },
+          ].map((b, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full opacity-25"
+              style={{
+                width: b.size,
+                height: b.size * 1.25,
+                left: `${b.x}%`,
+                top: `${b.y}%`,
+                backgroundColor: b.color,
+                borderRadius: "50% 50% 50% 50% / 40% 40% 60% 60%",
+                animation: `bob-float 4s ease-in-out ${b.delay}s infinite`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Layer 2: Tent */}
+      <div
+        className="absolute inset-x-0 top-[8%] bottom-[20%]"
+        style={{ transform: `translateX(${layer2X}px)` }}
+      >
+        <TentAwning stripeColor={booth.tentStripeColor} baseColor={booth.tentBaseColor} />
+        <TentPoles />
+
+        {/* Hanging balloons from awning */}
+        {[
+          { color: "#FF1493", left: 18, delay: 0, size: 22 },
+          { color: "#39FF14", left: 35, delay: 1.5, size: 18 },
+          { color: "#FFE600", left: 52, delay: 0.7, size: 24 },
+          { color: "#FF6B1A", left: 68, delay: 2.1, size: 20 },
+          { color: "#FF1493", left: 82, delay: 1.0, size: 16 },
+        ].map((b, i) => (
+          <HangingBalloon key={i} color={b.color} left={b.left} delay={b.delay} size={b.size} />
+        ))}
+
+        {/* Popped balloon scraps on the booth wall */}
+        {[
+          { left: 22, top: 45, rotation: -30, color: "#FF1493" },
+          { left: 72, top: 52, rotation: 45, color: "#39FF14" },
+          { left: 48, top: 38, rotation: -15, color: "#FFE600" },
+        ].map((s, i) => (
+          <PoppedScrap key={i} {...s} />
+        ))}
+
+        {/* Darts stuck in wood */}
+        <StuckDart left={15} top={62} angle={-25} />
+        <StuckDart left={78} top={55} angle={30} />
+        <StuckDart left={40} top={70} angle={-10} />
+
+        {/* Wooden shelf with prize hint */}
+        <div
+          className="absolute left-1/2 bottom-[25%] -translate-x-1/2 w-[70%] h-3"
+          style={{
+            background: "linear-gradient(180deg, var(--color-wood-light), var(--color-wood-dark))",
+            borderRadius: "2px",
+            border: "2px solid var(--color-toon-shadow)",
+          }}
+        />
+        {/* Mini prizes on shelf */}
+        <span className="absolute left-[22%] bottom-[27%] text-sm" aria-hidden>🧸</span>
+        <span className="absolute left-[42%] bottom-[27%] text-sm" aria-hidden>⭐</span>
+        <span className="absolute left-[62%] bottom-[27%] text-sm" aria-hidden>🎖️</span>
+      </div>
+
+      {/* Layer 3: Foreground UI */}
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center z-10"
+        style={{ transform: `translateX(${layer3X}px)` }}
+      >
+        <BoothSign text={booth.signText} />
+        <PriceChalkboard text={booth.priceText} />
+        <PlayButton onClick={onPlay} insufficient={showInsufficient} boothName={booth.name} />
+      </div>
+
+      {/* Layer 4: Ground */}
+      <GroundStrip layer4X={layer4X} accentColor="var(--color-circus-red)" />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   BOTTLE BASH BOOTH SCENE
+   ═══════════════════════════════════════════════════════ */
+
+function StackedBottle({
+  wobbleDelay,
+  size,
+}: {
+  wobbleDelay?: number;
+  size?: "sm" | "md";
+}) {
+  const s = size === "sm" ? { w: 16, h: 36, neckW: 6, neckH: 8 } : { w: 20, h: 44, neckW: 7, neckH: 10 };
+  return (
+    <div
+      className="flex flex-col items-center"
+      style={wobbleDelay !== undefined ? {
+        animation: `wiggle 0.4s ease-in-out ${wobbleDelay}s infinite`,
+      } : undefined}
+      aria-hidden
+    >
+      {/* Neck */}
+      <div
+        style={{
+          width: s.neckW,
+          height: s.neckH,
+          background: "linear-gradient(90deg, #F5F0E8, #FFF8E7, #EDE5D8)",
+          borderRadius: "3px 3px 1px 1px",
+          border: "1.5px solid var(--color-toon-shadow)",
+          borderBottom: "none",
+        }}
+      />
+      {/* Neck ring */}
+      <div
+        style={{
+          width: s.neckW + 4,
+          height: 3,
+          background: "var(--color-tangerine)",
+          borderRadius: "1px",
+          border: "1px solid var(--color-toon-shadow)",
+        }}
+      />
+      {/* Body */}
+      <div
+        style={{
+          width: s.w,
+          height: s.h,
+          background: "linear-gradient(90deg, #F0EBE0 0%, #FFF8E7 20%, #F5F0E8 50%, #FFF8E7 80%, #EDE5D8 100%)",
+          borderRadius: "3px 3px 3px 3px",
+          border: "2px solid var(--color-toon-shadow)",
+          boxShadow: "inset -2px -2px 4px rgba(0,0,0,0.15), inset 1px 1px 3px rgba(255,255,255,0.4)",
+        }}
+      />
+      {/* Base */}
+      <div
+        style={{
+          width: s.w + 2,
+          height: 3,
+          background: "var(--color-toon-shadow)",
+          borderRadius: "1px",
+          opacity: 0.3,
+        }}
+      />
+    </div>
+  );
+}
+
+function Baseball({ left, rotation }: { left: number; rotation: number }) {
+  return (
+    <div
+      className="absolute"
+      style={{
+        left: `${left}%`,
+        top: "78%",
+        width: 16,
+        height: 16,
+        transform: `rotate(${rotation}deg)`,
+      }}
+      aria-hidden
+    >
+      {/* Ball body */}
+      <div
+        className="rounded-full w-full h-full"
+        style={{
+          background: "radial-gradient(circle at 35% 35%, #FFF8E7, #E8E0D0)",
+          border: "2px solid var(--color-toon-shadow)",
+          boxShadow: "inset -1px -1px 3px rgba(0,0,0,0.2)",
+        }}
+      />
+      {/* Red stitching lines */}
+      <div
+        className="absolute"
+        style={{
+          left: "50%",
+          top: "10%",
+          width: 1.5,
+          height: "80%",
+          background: "var(--color-circus-red)",
+          transform: "translateX(-50%)",
+          opacity: 0.7,
+        }}
+      />
+      <div
+        className="absolute"
+        style={{
+          left: "10%",
+          top: "50%",
+          width: "80%",
+          height: 1.5,
+          background: "var(--color-circus-red)",
+          transform: "translateY(-50%)",
+          opacity: 0.7,
+        }}
+      />
+    </div>
+  );
+}
+
+function BottleBashBoothScene({
+  booth,
+  index,
+  scrollOffset,
+  viewportWidth,
+  onPlay,
+  showInsufficient,
+}: {
+  booth: BoothConfig;
+  index: number;
+  scrollOffset: number;
+  viewportWidth: number;
+  onPlay: () => void;
+  showInsufficient: boolean;
+}) {
+  const boothCenter = index * viewportWidth;
+  const offset = scrollOffset - boothCenter;
+  const layer1X = offset * 0.2;
+  const layer2X = offset * 0.5;
+  const layer3X = offset * 1.0;
+  const layer4X = offset * 1.2;
+
+  return (
+    <div className="min-w-[100vw] h-dvh relative snap-center overflow-hidden flex-shrink-0">
+      {/* Layer 1: Backdrop */}
+      <div className="absolute inset-0" style={{ transform: `translateX(${layer1X}px)` }}>
+        <NightSkyBackdrop />
+        {/* Ambient bottle silhouettes in background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+          <div className="absolute left-1/2 top-[20%] -translate-x-1/2 opacity-15">
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-2">
+                <BottleShape /><BottleShape /><BottleShape />
+              </div>
+              <div className="flex gap-2">
+                <BottleShape /><BottleShape />
+              </div>
+              <div className="flex gap-2">
+                <BottleShape />
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      {/* Floating baseball */}
+
+      {/* Layer 2: Tent + Bottle Pyramid + Baseballs */}
       <div
-        className="absolute right-[20%] top-[45%] w-6 h-6 rounded-full opacity-15"
-        style={{
-          background:
-            "radial-gradient(circle at 35% 35%, var(--color-tent-canvas), var(--color-wood-dark))",
-          animation: "bob-float 3.5s ease-in-out 0.5s infinite",
-        }}
-      />
+        className="absolute inset-x-0 top-[8%] bottom-[20%]"
+        style={{ transform: `translateX(${layer2X}px)` }}
+      >
+        <TentAwning stripeColor={booth.tentStripeColor} baseColor={booth.tentBaseColor} />
+        <TentPoles />
+
+        {/* Prize shelf above */}
+        <div
+          className="absolute top-[12%] left-1/2 -translate-x-1/2 w-[80%] h-2"
+          style={{
+            background: "linear-gradient(180deg, var(--color-wood-light), var(--color-wood-dark))",
+            borderRadius: "2px",
+            border: "2px solid var(--color-toon-shadow)",
+          }}
+        />
+        <span className="absolute top-[4%] left-[20%] text-xs" aria-hidden>🧸</span>
+        <span className="absolute top-[4%] left-[50%] text-xs" aria-hidden>⭐</span>
+        <span className="absolute top-[4%] left-[75%] text-xs" aria-hidden>🏆</span>
+
+        {/* Wooden counter/shelf for bottles */}
+        <div
+          className="absolute bottom-[40%] left-1/2 -translate-x-1/2"
+          style={{
+            width: "70%",
+            maxWidth: "300px",
+          }}
+        >
+          {/* Shelf ledge */}
+          <div
+            style={{
+              width: "100%",
+              height: 10,
+              background: "linear-gradient(180deg, #8B5E3C, var(--color-wood-dark))",
+              borderRadius: "3px",
+              border: "3px solid var(--color-toon-shadow)",
+              boxShadow: "3px 3px 0 var(--color-toon-shadow)",
+            }}
+          />
+
+          {/* Bottle pyramid: Row 1 (3 bottles) */}
+          <div className="flex justify-center gap-2 -mt-[52px]">
+            <StackedBottle wobbleDelay={0} />
+            <StackedBottle wobbleDelay={0.8} />
+            <StackedBottle wobbleDelay={1.6} />
+          </div>
+
+          {/* Bottle pyramid: Row 2 (2 bottles) */}
+          <div className="flex justify-center gap-3 -mt-[10px]">
+            <StackedBottle size="sm" wobbleDelay={0.4} />
+            <StackedBottle size="sm" wobbleDelay={1.2} />
+          </div>
+
+          {/* Bottle pyramid: Row 3 (1 bottle on top) */}
+          <div className="flex justify-center -mt-[8px]">
+            <StackedBottle size="sm" />
+          </div>
+        </div>
+
+        {/* Baseballs sitting on the counter */}
+        <Baseball left={20} rotation={15} />
+        <Baseball left={38} rotation={-20} />
+        <Baseball left={65} rotation={45} />
+        <Baseball left={78} rotation={-10} />
+      </div>
+
+      {/* Layer 3: Foreground UI */}
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center z-10"
+        style={{ transform: `translateX(${layer3X}px)` }}
+      >
+        <BoothSign text={booth.signText} />
+        <PriceChalkboard text={booth.priceText} />
+        <PlayButton onClick={onPlay} insufficient={showInsufficient} boothName={booth.name} />
+      </div>
+
+      {/* Layer 4: Ground */}
+      <GroundStrip layer4X={layer4X} accentColor="var(--color-tangerine)" />
     </div>
   );
 }
@@ -140,40 +881,358 @@ function BottleShape() {
   );
 }
 
-function DuckBg() {
+/* ═══════════════════════════════════════════════════════
+   DUCK POND BOOTH SCENE
+   ═══════════════════════════════════════════════════════ */
+
+function MetalTrack() {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-      {/* Pond surface */}
+    <div
+      className="absolute left-[10%] right-[10%]"
+      style={{ top: "42%", height: 30 }}
+      aria-hidden
+    >
+      {/* U-shaped channel */}
       <div
-        className="absolute left-0 right-0 bottom-[35%] h-[30%] opacity-20"
+        className="w-full h-full"
         style={{
-          background:
-            "linear-gradient(180deg, rgba(26,143,192,0.4) 0%, rgba(77,200,240,0.3) 100%)",
-          borderRadius: "45% 45% 0 0 / 20% 20% 0 0",
+          background: "linear-gradient(180deg, #6B6B7B 0%, #9A9AAA 15%, #C0C0D0 40%, #9A9AAA 60%, #6B6B7B 100%)",
+          borderRadius: "0 0 8px 8px",
+          border: "3px solid var(--color-toon-shadow)",
+          borderTop: "2px solid #555568",
+          boxShadow: "inset 0 4px 8px rgba(0,0,0,0.4), 0 2px 0 rgba(255,255,255,0.1)",
+        }}
+      >
+        {/* Metallic sheen overlay */}
+        <div
+          className="absolute inset-0 rounded-b-lg"
+          style={{
+            background: "linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 40%, rgba(255,255,255,0.08) 70%, transparent 100%)",
+          }}
+        />
+        {/* Water line inside track */}
+        <div
+          className="absolute bottom-0 left-1 right-1"
+          style={{
+            height: 18,
+            background: "linear-gradient(180deg, rgba(0,191,255,0.3) 0%, rgba(26,143,192,0.5) 100%)",
+            borderRadius: "0 0 5px 5px",
+          }}
+        />
+      </div>
+      {/* Track supports/brackets */}
+      <div
+        className="absolute -bottom-3 left-[10%]"
+        style={{
+          width: 6,
+          height: 10,
+          background: "var(--color-toon-shadow)",
+          borderRadius: "1px",
         }}
       />
-      {/* Duck silhouettes */}
-      {[1, 2, 3, 4].map((n) => (
-        <div
-          key={n}
-          className="absolute opacity-20 text-3xl"
-          style={{
-            left: `${15 + n * 18}%`,
-            top: `${50 + (n % 2) * 8}%`,
-            animation: `bob-float ${3 + n * 0.3}s ease-in-out ${n * 0.7}s infinite`,
-            filter: "brightness(0) invert(1)",
-          }}
-        >
-          🦆
-        </div>
-      ))}
+      <div
+        className="absolute -bottom-3 right-[10%]"
+        style={{
+          width: 6,
+          height: 10,
+          background: "var(--color-toon-shadow)",
+          borderRadius: "1px",
+        }}
+      />
     </div>
   );
 }
 
-/* ───────────────────────────────────────────
+function DriftingDuck({
+  index,
+  speed,
+  delay,
+  hasTarget,
+}: {
+  index: number;
+  speed: number;
+  delay: number;
+  hasTarget: boolean;
+}) {
+  return (
+    <div
+      className="absolute"
+      style={{
+        top: `${38 + index * 3}%`,
+        animation: `drift-duck ${speed}s ease-in-out ${delay}s infinite alternate`,
+      }}
+      aria-hidden
+    >
+      {/* Duck body */}
+      <div className="relative" style={{ width: 28, height: 20 }}>
+        {/* Yellow duck shape */}
+        <div
+          style={{
+            width: 24,
+            height: 18,
+            background: "#FFD700",
+            borderRadius: "50% 50% 50% 50% / 55% 55% 45% 45%",
+            border: "2px solid var(--color-toon-shadow)",
+            boxShadow: "inset -1px -2px 3px rgba(0,0,0,0.15), inset 1px 1px 2px rgba(255,255,255,0.4)",
+          }}
+        />
+        {/* Beak */}
+        <div
+          className="absolute"
+          style={{
+            right: -5,
+            top: 7,
+            width: 8,
+            height: 5,
+            background: "#FF6B1A",
+            borderRadius: "0 3px 3px 0",
+            border: "1.5px solid var(--color-toon-shadow)",
+            borderLeft: "none",
+          }}
+        />
+        {/* Eye */}
+        <div
+          className="absolute rounded-full bg-ink"
+          style={{
+            right: 4,
+            top: 4,
+            width: 3,
+            height: 3,
+            background: "var(--color-ink)",
+          }}
+        />
+        {/* Target (red bullseye) — only on some ducks */}
+        {hasTarget && (
+          <div
+            className="absolute"
+            style={{
+              left: 8,
+              top: 6,
+              width: 10,
+              height: 10,
+            }}
+          >
+            <div
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: "var(--color-circus-red)",
+                border: "1px solid var(--color-toon-shadow)",
+              }}
+            />
+            <div
+              className="absolute rounded-full bg-tent-canvas"
+              style={{
+                left: 2.5,
+                top: 2.5,
+                width: 5,
+                height: 5,
+                background: "var(--color-tent-canvas)",
+                border: "1px solid var(--color-toon-shadow)",
+              }}
+            />
+            <div
+              className="absolute rounded-full"
+              style={{
+                left: 4,
+                top: 4,
+                width: 2,
+                height: 2,
+                background: "var(--color-circus-red)",
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Blinking bulb for carnival sign */
+function BlinkBulb({ delayClass, size }: { delayClass: string; size?: number }) {
+  const s = size ?? 6;
+  return (
+    <div
+      className={`rounded-full animate-blink-bulb ${delayClass}`}
+      style={{
+        width: s,
+        height: s,
+        background: "var(--color-bulb-gold)",
+        border: "1px solid var(--color-toon-shadow)",
+      }}
+    />
+  );
+}
+
+function DuckPondBoothScene({
+  booth,
+  index,
+  scrollOffset,
+  viewportWidth,
+  onPlay,
+  showInsufficient,
+}: {
+  booth: BoothConfig;
+  index: number;
+  scrollOffset: number;
+  viewportWidth: number;
+  onPlay: () => void;
+  showInsufficient: boolean;
+}) {
+  const boothCenter = index * viewportWidth;
+  const offset = scrollOffset - boothCenter;
+  const layer1X = offset * 0.2;
+  const layer2X = offset * 0.5;
+  const layer3X = offset * 1.0;
+  const layer4X = offset * 1.2;
+
+  return (
+    <div className="min-w-[100vw] h-dvh relative snap-center overflow-hidden flex-shrink-0">
+      {/* Layer 1: Backdrop */}
+      <div className="absolute inset-0" style={{ transform: `translateX(${layer1X}px)` }}>
+        <NightSkyBackdrop />
+        {/* Pond surface bg */}
+        <div
+          className="absolute left-0 right-0 bottom-[35%]"
+          style={{
+            height: "25%",
+            background: "linear-gradient(180deg, rgba(0,191,255,0.15) 0%, rgba(26,143,192,0.25) 100%)",
+            borderRadius: "45% 45% 0 0 / 20% 20% 0 0",
+          }}
+          aria-hidden
+        />
+        {/* Duck bg silhouettes */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+          {[1, 2, 3, 4].map((n) => (
+            <div
+              key={n}
+              className="absolute opacity-20 text-3xl"
+              style={{
+                left: `${15 + n * 18}%`,
+                top: `${50 + (n % 2) * 8}%`,
+                animation: `bob-float ${3 + n * 0.3}s ease-in-out ${n * 0.7}s infinite`,
+                filter: "brightness(0) invert(1)",
+              }}
+            >
+              🦆
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Layer 2: Tent + Metal Track + Ducks */}
+      <div
+        className="absolute inset-x-0 top-[8%] bottom-[20%]"
+        style={{ transform: `translateX(${layer2X}px)` }}
+      >
+        <TentAwning stripeColor={booth.tentStripeColor} baseColor={booth.tentBaseColor} />
+        <TentPoles />
+
+        {/* Illuminated carnival sign above the track */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2"
+          style={{ top: "10%", width: "70%", maxWidth: "280px" }}
+        >
+          {/* Bulb string top */}
+          <div className="flex justify-center gap-2 mb-0.5">
+            {["delay-bulb-1", "delay-bulb-3", "delay-bulb-5", "delay-bulb-7", "delay-bulb-9"].map((d, i) => (
+              <BlinkBulb key={i} delayClass={d} size={5} />
+            ))}
+          </div>
+          {/* Sign board */}
+          <div
+            style={{
+              background: "linear-gradient(180deg, #1A3A5C, #0D2040)",
+              borderRadius: "8px",
+              border: "3px solid var(--color-toon-shadow)",
+              boxShadow: "0 0 12px rgba(0,191,255,0.3), inset 0 0 8px rgba(0,191,255,0.1)",
+              padding: "6px 12px",
+            }}
+          >
+            <h2
+              className="text-center m-0"
+              style={{
+                fontFamily: "var(--font-carnival)",
+                color: "var(--color-electric-yellow)",
+                fontSize: "clamp(1rem, 4vw, 1.6rem)",
+                textShadow: "2px 2px 0 var(--color-toon-shadow), 0 0 10px rgba(255,230,0,0.4)",
+                letterSpacing: "0.05em",
+              }}
+            >
+              DUCK POND
+            </h2>
+          </div>
+          {/* Bulb string bottom */}
+          <div className="flex justify-center gap-2 mt-0.5">
+            {["delay-bulb-2", "delay-bulb-4", "delay-bulb-6", "delay-bulb-8", "delay-bulb-10"].map((d, i) => (
+              <BlinkBulb key={i} delayClass={d} size={5} />
+            ))}
+          </div>
+        </div>
+
+        {/* Metal Track */}
+        <MetalTrack />
+
+        {/* Drifting ducks in the track */}
+        <div className="absolute left-[12%] right-[12%]" style={{ top: "40%", height: 34 }}>
+          {[
+            { speed: 3.5, delay: 0, hasTarget: true },
+            { speed: 4.2, delay: 1.5, hasTarget: false },
+            { speed: 3.0, delay: 0.8, hasTarget: true },
+            { speed: 4.8, delay: 2.2, hasTarget: true },
+            { speed: 3.8, delay: 3.0, hasTarget: false },
+          ].map((d, i) => (
+            <DriftingDuck key={i} index={i} speed={d.speed} delay={d.delay} hasTarget={d.hasTarget} />
+          ))}
+        </div>
+
+        {/* Fishing nets / decorations on booth wall */}
+        <div
+          className="absolute left-[14%]"
+          style={{
+            top: "58%",
+            width: 40,
+            height: 30,
+            background:
+              "repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(255,255,255,0.08) 4px, rgba(255,255,255,0.08) 5px), repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(255,255,255,0.08) 4px, rgba(255,255,255,0.08) 5px)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: "2px",
+          }}
+          aria-hidden
+        />
+        <div
+          className="absolute right-[14%]"
+          style={{
+            top: "58%",
+            width: 40,
+            height: 30,
+            background:
+              "repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(255,255,255,0.08) 4px, rgba(255,255,255,0.08) 5px), repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(255,255,255,0.08) 4px, rgba(255,255,255,0.08) 5px)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: "2px",
+          }}
+          aria-hidden
+        />
+      </div>
+
+      {/* Layer 3: Foreground UI */}
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center z-10"
+        style={{ transform: `translateX(${layer3X}px)` }}
+      >
+        <BoothSign text={booth.signText} />
+        <PriceChalkboard text={booth.priceText} />
+        <PlayButton onClick={onPlay} insufficient={showInsufficient} boothName={booth.name} />
+      </div>
+
+      {/* Layer 4: Ground */}
+      <GroundStrip layer4X={layer4X} accentColor="var(--color-sky-pop)" />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
    WalkIndicator
-   ═══════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════ */
 
 function WalkIndicator({
   total,
@@ -198,7 +1257,6 @@ function WalkIndicator({
           }}
           aria-label={`Go to booth ${i + 1}`}
         >
-          {/* Mini tent icon */}
           <div
             className="w-6 h-5 flex flex-col items-center"
             style={{
@@ -234,933 +1292,9 @@ function WalkIndicator({
   );
 }
 
-/* ───────────────────────────────────────────
-   BoothScene
-   ═══════════════════════════════════════════ */
-
-function BoothScene({
-  booth,
-  index,
-  scrollOffset,
-  viewportWidth,
-  onPlay,
-  showInsufficient,
-}: {
-  booth: BoothConfig;
-  index: number;
-  scrollOffset: number;
-  viewportWidth: number;
-  onPlay: () => void;
-  showInsufficient: boolean;
-}) {
-  const boothCenter = index * viewportWidth;
-  const offset = scrollOffset - boothCenter;
-
-  const layer1X = offset * 0.2;
-  const layer2X = offset * 0.5;
-  const layer3X = offset * 1.0;
-  const layer4X = offset * 1.2;
-
-  return (
-    <div className="min-w-[100vw] h-dvh relative snap-center overflow-hidden flex-shrink-0">
-      {/* Layer 1: Backdrop — night sky, stars, decorations */}
-      <div
-        className="absolute inset-0"
-        style={{ transform: `translateX(${layer1X}px)` }}
-      >
-        {/* Night sky gradient */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(
-              180deg,
-              #0D0524 0%,
-              #1A0A2E 50%,
-              #2D1040 100%
-            )`,
-          }}
-        />
-        {/* Stars */}
-        {Array.from({ length: 20 }, (_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full bg-white"
-            style={{
-              width: 1 + (i % 3),
-              height: 1 + (i % 3),
-              left: `${(i * 37 + 13) % 100}%`,
-              top: `${(i * 23 + 7) % 40}%`,
-              opacity: 0.3 + (i % 3) * 0.2,
-              animation: `pulse-star ${2 + (i % 3)}s ease-in-out ${i * 0.3}s infinite`,
-            }}
-          />
-        ))}
-        {/* Distant ferris wheel silhouette */}
-        <div className="absolute right-[5%] top-[15%] opacity-8">
-          <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-            <circle cx="40" cy="40" r="30" stroke="var(--color-deep-purple)" strokeWidth="2" fill="none" opacity="0.15" />
-            <circle cx="40" cy="40" r="2" fill="var(--color-deep-purple)" opacity="0.15" />
-            {[0, 45, 90, 135].map((angle) => (
-              <line
-                key={angle}
-                x1="40"
-                y1="40"
-                x2={40 + 28 * Math.cos((angle * Math.PI) / 180)}
-                y2={40 + 28 * Math.sin((angle * Math.PI) / 180)}
-                stroke="var(--color-deep-purple)"
-                strokeWidth="1"
-                opacity="0.12"
-              />
-            ))}
-          </svg>
-        </div>
-        {/* Background decorations */}
-        {booth.bgDecorations === "balloons" && <BalloonBg />}
-        {booth.bgDecorations === "bottles" && <BottleBg />}
-        {booth.bgDecorations === "ducks" && <DuckBg />}
-      </div>
-
-      {/* Layer 2: Tent Structure */}
-      <div
-        className="absolute inset-x-0 top-[8%] bottom-[20%]"
-        style={{ transform: `translateX(${layer2X}px)` }}
-      >
-        {/* Tent top — striped awning */}
-        <div
-          className="relative mx-auto w-[90%] h-full"
-          style={{
-            background: `repeating-linear-gradient(
-              90deg,
-              ${booth.tentStripeColor} 0px,
-              ${booth.tentStripeColor} 48px,
-              ${booth.tentBaseColor} 48px,
-              ${booth.tentBaseColor} 96px
-            )`,
-            borderRadius: "50% 50% 0 0 / 8% 8% 0 0",
-            border: "4px solid var(--color-toon-shadow)",
-            borderBottom: "none",
-            boxShadow: "inset 0 -40px 60px rgba(0,0,0,0.3)",
-            overflow: "hidden",
-          }}
-        >
-          {/* Subtle wave animation */}
-          <div
-            className="absolute inset-0 animate-tent-stripe-wave opacity-30"
-            style={{
-              background: `repeating-linear-gradient(
-                90deg,
-                transparent 0px,
-                transparent 40px,
-                rgba(255,255,255,0.08) 40px,
-                rgba(255,255,255,0.08) 80px
-              )`,
-            }}
-          />
-          {/* Draped flaps on sides */}
-          <div
-            className="absolute left-0 top-0 bottom-0 w-8"
-            style={{
-              background: `linear-gradient(90deg, ${booth.tentStripeColor}, transparent)`,
-            }}
-          />
-          <div
-            className="absolute right-0 top-0 bottom-0 w-8"
-            style={{
-              background: `linear-gradient(270deg, ${booth.tentStripeColor}, transparent)`,
-            }}
-          />
-        </div>
-        {/* Tent poles */}
-        <div
-          className="absolute left-[8%] top-0 bottom-0 w-2"
-          style={{
-            background: "linear-gradient(90deg, var(--color-ink), var(--color-toon-shadow))",
-            borderRadius: "2px",
-          }}
-        />
-        <div
-          className="absolute right-[8%] top-0 bottom-0 w-2"
-          style={{
-            background: "linear-gradient(90deg, var(--color-toon-shadow), var(--color-ink))",
-            borderRadius: "2px",
-          }}
-        />
-      </div>
-
-      {/* Layer 3: Foreground — signage, price, PLAY button */}
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center z-10"
-        style={{ transform: `translateX(${layer3X}px)` }}
-      >
-        {/* Signage */}
-        <div
-          className="mb-3 px-6 py-3"
-          style={{
-            background: "linear-gradient(180deg, #3E2210, #7A4F2B)",
-            borderRadius: "var(--radius-bounce)",
-            border: "3px solid var(--color-toon-shadow)",
-            boxShadow: "4px 4px 0 var(--color-toon-shadow)",
-            transform: "rotate(-1.5deg)",
-          }}
-        >
-          <h2
-            className="text-center m-0"
-            style={{
-              fontFamily: "var(--font-carnival)",
-              color: "var(--color-electric-yellow)",
-              fontSize: "clamp(1.5rem, 6vw, 2.5rem)",
-              textShadow: "3px 3px 0 var(--color-toon-shadow)",
-              letterSpacing: "0.03em",
-            }}
-          >
-            {booth.signText}
-          </h2>
-        </div>
-
-        {/* Price chalkboard */}
-        <div
-          className="mb-5 px-4 py-2"
-          style={{
-            background: "#2A4A3A",
-            borderRadius: "8px",
-            border: "3px solid #3E2210",
-            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.4)",
-            transform: "rotate(1deg)",
-          }}
-        >
-          <p
-            className="m-0 text-center"
-            style={{
-              fontFamily: "var(--font-toon)",
-              color: "#D4E8D0",
-              fontSize: "clamp(0.7rem, 2.5vw, 1rem)",
-              fontWeight: 600,
-              letterSpacing: "0.05em",
-            }}
-          >
-            {booth.priceText}
-          </p>
-        </div>
-
-        {/* Booth emoji */}
-        <span
-          className="text-5xl mb-4"
-          style={{
-            filter: "drop-shadow(3px 3px 0 var(--color-toon-shadow))",
-          }}
-          role="img"
-          aria-label={booth.name}
-        >
-          {booth.emoji}
-        </span>
-
-        {/* PLAY button */}
-        <button
-          type="button"
-          onClick={onPlay}
-          className="cursor-pointer select-none"
-          style={{
-            fontFamily: "var(--font-carnival)",
-            background: "var(--color-hot-magenta)",
-            color: "var(--color-tent-canvas)",
-            padding: "0.6rem 2.5rem",
-            borderRadius: "var(--radius-bounce)",
-            border: "3px solid var(--color-toon-shadow)",
-            boxShadow: "5px 5px 0 var(--color-toon-shadow)",
-            fontSize: "clamp(1rem, 4vw, 1.4rem)",
-            letterSpacing: "0.05em",
-            transform: "rotate(0.5deg)",
-            transition: "transform 0.1s ease, box-shadow 0.1s ease",
-          }}
-          onMouseDown={(e) => {
-            e.currentTarget.style.transform = "translate(2px, 2px) rotate(0.5deg)";
-            e.currentTarget.style.boxShadow = "2px 2px 0 var(--color-toon-shadow)";
-          }}
-          onMouseUp={(e) => {
-            e.currentTarget.style.transform = "rotate(0.5deg)";
-            e.currentTarget.style.boxShadow = "5px 5px 0 var(--color-toon-shadow)";
-          }}
-        >
-          PLAY
-        </button>
-
-        {/* Insufficient tickets indicator */}
-        {showInsufficient && (
-          <div
-            className="mt-3 animate-bounce-in"
-            style={{ animationDuration: "0.6s" }}
-          >
-            <span
-              className="text-4xl block text-center"
-              role="img"
-              aria-label="Not enough tickets"
-            >
-              🤡
-            </span>
-            <p
-              className="m-0 text-center"
-              style={{
-                fontFamily: "var(--font-toon)",
-                color: "var(--color-hot-magenta)",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-              }}
-            >
-              Need more tickets!
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Layer 4: Ground — welcome mat, rope barriers */}
-      <div
-        className="absolute bottom-0 inset-x-0 h-[18%]"
-        style={{ transform: `translateX(${layer4X}px)` }}
-      >
-        {/* Rope barriers */}
-        <div className="absolute left-[5%] right-[5%] top-0 flex justify-between">
-          <RopePost side="left" />
-          <RopePost side="right" />
-        </div>
-        {/* Welcome mat */}
-        <div
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[60%] max-w-[280px] h-3 rounded-sm"
-          style={{
-            background: `repeating-linear-gradient(
-              90deg,
-              var(--color-circus-red) 0px,
-              var(--color-circus-red) 20px,
-              var(--color-tent-canvas) 20px,
-              var(--color-tent-canvas) 40px
-            )`,
-            border: "2px solid var(--color-toon-shadow)",
-            opacity: 0.7,
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function RopePost({ side }: { side: "left" | "right" }) {
-  return (
-    <div className="flex flex-col items-center" aria-hidden>
-      {/* Post */}
-      <div
-        className="w-2.5 h-12 rounded-sm"
-        style={{
-          background: "linear-gradient(90deg, var(--color-wood-light), var(--color-wood-dark))",
-          border: "1px solid var(--color-toon-shadow)",
-        }}
-      />
-      {/* Ball top */}
-      <div
-        className="w-4 h-4 rounded-full -mt-1"
-        style={{
-          background: "var(--color-bulb-gold)",
-          border: "2px solid var(--color-toon-shadow)",
-          boxShadow: "0 0 6px var(--color-bulb-gold)",
-        }}
-      />
-    </div>
-  );
-}
-
-/* ───────────────────────────────────────────
-   BalloonPopBoothScene — Custom Balloon Pop Booth
-   ═══════════════════════════════════════════ */
-
-/** A single hanging balloon on the back wall */
-function HangingBalloon({
-  color,
-  left,
-  delay,
-  size,
-}: {
-  color: string;
-  left: string;
-  delay: number;
-  size: number;
-}) {
-  return (
-    <div
-      className="absolute"
-      style={{
-        left,
-        top: "25%",
-        animation: `wiggle ${3 + delay * 0.7}s ease-in-out ${delay}s infinite`,
-        transformOrigin: "top center",
-      }}
-      aria-hidden
-    >
-      {/* String */}
-      <div
-        className="mx-auto w-px"
-        style={{
-          height: `${size * 1.6}px`,
-          background: "var(--color-tent-canvas)",
-          opacity: 0.5,
-        }}
-      />
-      {/* Balloon body */}
-      <div
-        style={{
-          width: `${size}px`,
-          height: `${size * 1.25}px`,
-          backgroundColor: color,
-          borderRadius: "50% 50% 50% 50% / 40% 40% 60% 60%",
-          border: "2px solid rgba(0,0,0,0.25)",
-          boxShadow: `inset -3px -5px 8px rgba(0,0,0,0.2), inset 2px 2px 6px rgba(255,255,255,0.35)`,
-        }}
-      />
-      {/* Knot */}
-      <div
-        className="mx-auto"
-        style={{
-          width: `${size * 0.22}px`,
-          height: `${size * 0.18}px`,
-          backgroundColor: color,
-          filter: "brightness(0.7)",
-          borderRadius: "2px",
-          border: "1px solid rgba(0,0,0,0.2)",
-        }}
-      />
-    </div>
-  );
-}
-
-/** A popped balloon scrap still pinned to the wall */
-function PoppedScrap({
-  color,
-  left,
-  top,
-  rotation,
-}: {
-  color: string;
-  left: string;
-  top: string;
-  rotation: number;
-}) {
-  return (
-    <div
-      className="absolute"
-      style={{
-        left,
-        top,
-        transform: `rotate(${rotation}deg)`,
-      }}
-      aria-hidden
-    >
-      {/* Tiny string stub */}
-      <div
-        className="mx-auto w-px"
-        style={{
-          height: "14px",
-          background: "var(--color-tent-canvas)",
-          opacity: 0.4,
-        }}
-      />
-      {/* Shriveled scrap */}
-      <div
-        style={{
-          width: "14px",
-          height: "10px",
-          backgroundColor: color,
-          borderRadius: "30% 70% 50% 50% / 30% 30% 70% 70%",
-          border: "1.5px solid rgba(0,0,0,0.3)",
-          opacity: 0.7,
-        }}
-      />
-    </div>
-  );
-}
-
-/** A dart stuck in the wooden counter */
-function StuckDart({ angle, left, top }: { angle: number; left: string; top: string }) {
-  return (
-    <div
-      className="absolute"
-      style={{
-        left,
-        top,
-        transform: `rotate(${angle}deg)`,
-        transformOrigin: "bottom center",
-      }}
-      aria-hidden
-    >
-      {/* Dart shaft */}
-      <div
-        style={{
-          width: "2px",
-          height: "28px",
-          background: "linear-gradient(180deg, #C0C0C0, #888)",
-          margin: "0 auto",
-        }}
-      />
-      {/* Dart flight (fletching) */}
-      <div
-        style={{
-          width: "0",
-          height: "0",
-          borderLeft: "4px solid transparent",
-          borderRight: "4px solid transparent",
-          borderBottom: "6px solid var(--color-hot-magenta)",
-          margin: "0 auto",
-        }}
-      />
-      {/* Dart tip (embedded in wood — just visible) */}
-      <div
-        style={{
-          width: "0",
-          height: "0",
-          borderLeft: "3px solid transparent",
-          borderRight: "3px solid transparent",
-          borderTop: "5px solid #CCC",
-          margin: "0 auto",
-          marginTop: "-1px",
-        }}
-      />
-    </div>
-  );
-}
-
-function BalloonPopBoothScene({
-  booth,
-  index,
-  scrollOffset,
-  viewportWidth,
-  onPlay,
-  showInsufficient,
-}: {
-  booth: BoothConfig;
-  index: number;
-  scrollOffset: number;
-  viewportWidth: number;
-  onPlay: () => void;
-  showInsufficient: boolean;
-}) {
-  const boothCenter = index * viewportWidth;
-  const offset = scrollOffset - boothCenter;
-
-  const layer1X = offset * 0.2;
-  const layer2X = offset * 0.5;
-  const layer3X = offset * 1.0;
-  const layer4X = offset * 1.2;
-
-  // Balloon colors
-  const balloonColors = [
-    "var(--color-circus-red)",
-    "var(--color-hot-magenta)",
-    "var(--color-acid-green)",
-    "var(--color-electric-yellow)",
-    "var(--color-sky-pop)",
-    "var(--color-tangerine)",
-  ];
-
-  return (
-    <div className="min-w-[100vw] h-dvh relative snap-center overflow-hidden flex-shrink-0">
-      {/* Layer 1: Backdrop — night sky */}
-      <div
-        className="absolute inset-0"
-        style={{ transform: `translateX(${layer1X}px)` }}
-      >
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(180deg, #0D0524 0%, #1A0A2E 50%, #2D1040 100%)`,
-          }}
-        />
-        {/* Stars */}
-        {Array.from({ length: 20 }, (_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full bg-white"
-            style={{
-              width: 1 + (i % 3),
-              height: 1 + (i % 3),
-              left: `${(i * 37 + 13) % 100}%`,
-              top: `${(i * 23 + 7) % 40}%`,
-              opacity: 0.3 + (i % 3) * 0.2,
-              animation: `pulse-star ${2 + (i % 3)}s ease-in-out ${i * 0.3}s infinite`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Layer 2: Booth Structure — wooden booth with awning */}
-      <div
-        className="absolute inset-x-0 top-[5%] bottom-[18%]"
-        style={{ transform: `translateX(${layer2X}px)` }}
-      >
-        {/* ── Striped awning (top portion) ── */}
-        <div
-          className="relative mx-auto w-[88%] h-[28%]"
-          style={{
-            background: `repeating-linear-gradient(
-              90deg,
-              var(--color-circus-red) 0px,
-              var(--color-circus-red) 52px,
-              var(--color-tent-canvas) 52px,
-              var(--color-tent-canvas) 104px
-            )`,
-            borderRadius: "50% 50% 0 0 / 15% 15% 0 0",
-            border: "4px solid var(--color-toon-shadow)",
-            borderBottom: "none",
-            boxShadow: "inset 0 -30px 50px rgba(0,0,0,0.25)",
-            overflow: "hidden",
-          }}
-        >
-          {/* Awning wave animation */}
-          <div
-            className="absolute inset-0 animate-tent-stripe-wave opacity-25"
-            style={{
-              background: `repeating-linear-gradient(
-                90deg,
-                transparent 0px,
-                transparent 44px,
-                rgba(255,255,255,0.06) 44px,
-                rgba(255,255,255,0.06) 88px
-              )`,
-            }}
-          />
-          {/* Pennant flags along awning bottom */}
-          {[10, 28, 46, 64, 82].map((pct, i) => (
-            <div
-              key={i}
-              className="absolute bottom-0"
-              style={{
-                left: `${pct}%`,
-                width: "0",
-                height: "0",
-                borderLeft: "7px solid transparent",
-                borderRight: "7px solid transparent",
-                borderTop: `10px solid ${i % 2 === 0 ? "var(--color-electric-yellow)" : "var(--color-hot-magenta)"}`,
-                filter: "drop-shadow(1px 1px 0 var(--color-toon-shadow))",
-              }}
-            />
-          ))}
-        </div>
-
-        {/* ── Booth back wall (wooden planks) ── */}
-        <div
-          className="relative mx-auto w-[88%] h-[55%]"
-          style={{
-            background: `
-              repeating-linear-gradient(
-                0deg,
-                transparent 0px,
-                transparent 1px,
-                rgba(0,0,0,0.15) 1px,
-                rgba(0,0,0,0.15) 2px
-              ),
-              linear-gradient(180deg, #4A2A14 0%, #3E2210 40%, #2A1508 100%)
-            `,
-            borderLeft: "4px solid var(--color-toon-shadow)",
-            borderRight: "4px solid var(--color-toon-shadow)",
-            boxShadow: "inset 0 4px 20px rgba(0,0,0,0.5)",
-          }}
-        >
-          {/* ── Prize shelf at top of back wall ── */}
-          <div
-            className="absolute left-0 right-0 top-[8%] mx-3"
-            style={{
-              height: "3px",
-              background: "linear-gradient(180deg, #8B6340, #5C3A1E)",
-              borderBottom: "1px solid rgba(0,0,0,0.3)",
-            }}
-          />
-          <div
-            className="absolute left-0 right-0 top-[calc(8%+3px)] mx-2"
-            style={{
-              height: "8px",
-              background: "linear-gradient(180deg, #7A4F2B 0%, #5C3A1E 60%, #3E2210 100%)",
-              borderBottom: "2px solid var(--color-toon-shadow)",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
-            }}
-          />
-          {/* Prize emojis on the shelf */}
-          <div className="absolute left-[12%] top-[2%] text-lg" aria-hidden>🧸</div>
-          <div className="absolute left-[42%] top-[2%] text-lg" aria-hidden>⭐</div>
-          <div className="absolute left-[72%] top-[2%] text-lg" aria-hidden>🎪</div>
-
-          {/* ── Hanging balloons on back wall ── */}
-          {balloonColors.map((color, i) => (
-            <HangingBalloon
-              key={`balloon-${i}`}
-              color={color}
-              left={`${8 + i * 15}%`}
-              delay={i * 0.6}
-              size={28 + (i % 3) * 4}
-            />
-          ))}
-
-          {/* ── Popped balloon scraps ── */}
-          <PoppedScrap
-            color="var(--color-circus-red)"
-            left="22%"
-            top="55%"
-            rotation={-15}
-          />
-          <PoppedScrap
-            color="var(--color-acid-green)"
-            left="62%"
-            top="50%"
-            rotation={12}
-          />
-          <PoppedScrap
-            color="var(--color-sky-pop)"
-            left="78%"
-            top="60%"
-            rotation={-8}
-          />
-        </div>
-
-        {/* ── Wooden counter spanning booth width ── */}
-        <div
-          className="relative mx-auto w-[88%]"
-          style={{
-            height: "14px",
-            background: "linear-gradient(180deg, #8B6340 0%, #7A4F2B 15%, #5C3A1E 50%, #3E2210 100%)",
-            border: "4px solid var(--color-toon-shadow)",
-            borderTop: "5px solid #9B7348",
-            borderBottom: "none",
-            boxShadow: "0 6px 14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
-          }}
-        >
-          {/* ── Darts stuck in counter front ── */}
-          <StuckDart angle={-20} left="18%" top="-32px" />
-          <StuckDart angle={15} left="52%" top="-34px" />
-          <StuckDart angle={-8} left="78%" top="-30px" />
-
-          {/* Cork board texture dots on counter */}
-          <div className="absolute inset-0 overflow-hidden opacity-30">
-            {Array.from({ length: 15 }, (_, i) => (
-              <div
-                key={i}
-                className="absolute rounded-full"
-                style={{
-                  width: `${2 + (i % 2)}px`,
-                  height: `${2 + (i % 2)}px`,
-                  left: `${(i * 31 + 5) % 100}%`,
-                  top: `${40 + (i % 3) * 15}%`,
-                  background: "var(--color-cork)",
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* ── Counter front face ── */}
-        <div
-          className="relative mx-auto w-[88%]"
-          style={{
-            height: "10px",
-            background: "linear-gradient(180deg, #3E2210 0%, #2A1508 100%)",
-            borderLeft: "4px solid var(--color-toon-shadow)",
-            borderRight: "4px solid var(--color-toon-shadow)",
-            borderBottom: "4px solid var(--color-toon-shadow)",
-            boxShadow: "0 4px 10px rgba(0,0,0,0.6)",
-          }}
-        />
-      </div>
-
-      {/* Tent poles */}
-      <div
-        className="absolute left-[6%] top-[5%] bottom-[18%] w-2"
-        style={{
-          background: "linear-gradient(90deg, var(--color-ink), var(--color-toon-shadow))",
-          borderRadius: "2px",
-          transform: `translateX(${layer2X}px)`,
-        }}
-      />
-      <div
-        className="absolute right-[6%] top-[5%] bottom-[18%] w-2"
-        style={{
-          background: "linear-gradient(90deg, var(--color-toon-shadow), var(--color-ink))",
-          borderRadius: "2px",
-          transform: `translateX(${layer2X}px)`,
-        }}
-      />
-
-      {/* ── Bulb lights along awning edge ── */}
-      <div
-        className="absolute inset-x-0 top-[calc(5%+28%-8px)] z-10 flex justify-center"
-        style={{ transform: `translateX(${layer2X}px)` }}
-      >
-        <div className="w-[88%] flex justify-around px-4">
-          {Array.from({ length: 10 }, (_, i) => (
-            <div
-              key={i}
-              className="w-3.5 h-3.5 rounded-full animate-blink-bulb"
-              style={{
-                backgroundColor: "var(--color-bulb-gold)",
-                border: "2px solid var(--color-toon-shadow)",
-                boxShadow: "0 0 6px 2px var(--color-bulb-gold)",
-                animationDelay: `${i * 0.15}s`,
-                marginTop: "-6px",
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Layer 3: Foreground — sign, price, emoji, PLAY */}
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center z-10"
-        style={{ transform: `translateX(${layer3X}px)` }}
-      >
-        {/* "POP 'EM ALL!" sign */}
-        <div
-          className="mb-2 px-6 py-3"
-          style={{
-            background: "linear-gradient(180deg, #3E2210, #7A4F2B)",
-            borderRadius: "var(--radius-bounce)",
-            border: "3px solid var(--color-toon-shadow)",
-            boxShadow: "4px 4px 0 var(--color-toon-shadow)",
-            transform: "rotate(-1.5deg)",
-          }}
-        >
-          <h2
-            className="text-center m-0"
-            style={{
-              fontFamily: "var(--font-carnival)",
-              color: "var(--color-electric-yellow)",
-              fontSize: "clamp(1.5rem, 6vw, 2.5rem)",
-              textShadow: "3px 3px 0 var(--color-toon-shadow)",
-              letterSpacing: "0.03em",
-            }}
-          >
-            {booth.signText}
-          </h2>
-        </div>
-
-        {/* Price chalkboard */}
-        <div
-          className="mb-5 px-4 py-2"
-          style={{
-            background: "#2A4A3A",
-            borderRadius: "8px",
-            border: "3px solid #3E2210",
-            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.4)",
-            transform: "rotate(1deg)",
-          }}
-        >
-          <p
-            className="m-0 text-center"
-            style={{
-              fontFamily: "var(--font-toon)",
-              color: "#D4E8D0",
-              fontSize: "clamp(0.7rem, 2.5vw, 1rem)",
-              fontWeight: 600,
-              letterSpacing: "0.05em",
-            }}
-          >
-            {booth.priceText}
-          </p>
-        </div>
-
-        {/* Booth emoji */}
-        <span
-          className="text-5xl mb-4"
-          style={{
-            filter: "drop-shadow(3px 3px 0 var(--color-toon-shadow))",
-          }}
-          role="img"
-          aria-label={booth.name}
-        >
-          {booth.emoji}
-        </span>
-
-        {/* PLAY button */}
-        <button
-          type="button"
-          onClick={onPlay}
-          className="cursor-pointer select-none"
-          style={{
-            fontFamily: "var(--font-carnival)",
-            background: "var(--color-hot-magenta)",
-            color: "var(--color-tent-canvas)",
-            padding: "0.6rem 2.5rem",
-            borderRadius: "var(--radius-bounce)",
-            border: "3px solid var(--color-toon-shadow)",
-            boxShadow: "5px 5px 0 var(--color-toon-shadow)",
-            fontSize: "clamp(1rem, 4vw, 1.4rem)",
-            letterSpacing: "0.05em",
-            transform: "rotate(0.5deg)",
-            transition: "transform 0.1s ease, box-shadow 0.1s ease",
-          }}
-          onMouseDown={(e) => {
-            e.currentTarget.style.transform = "translate(2px, 2px) rotate(0.5deg)";
-            e.currentTarget.style.boxShadow = "2px 2px 0 var(--color-toon-shadow)";
-          }}
-          onMouseUp={(e) => {
-            e.currentTarget.style.transform = "rotate(0.5deg)";
-            e.currentTarget.style.boxShadow = "5px 5px 0 var(--color-toon-shadow)";
-          }}
-        >
-          PLAY
-        </button>
-
-        {/* Insufficient tickets */}
-        {showInsufficient && (
-          <div
-            className="mt-3 animate-bounce-in"
-            style={{ animationDuration: "0.6s" }}
-          >
-            <span
-              className="text-4xl block text-center"
-              role="img"
-              aria-label="Not enough tickets"
-            >
-              🤡
-            </span>
-            <p
-              className="m-0 text-center"
-              style={{
-                fontFamily: "var(--font-toon)",
-                color: "var(--color-hot-magenta)",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-              }}
-            >
-              Need more tickets!
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Layer 4: Ground — welcome mat, rope barriers */}
-      <div
-        className="absolute bottom-0 inset-x-0 h-[18%]"
-        style={{ transform: `translateX(${layer4X}px)` }}
-      >
-        <div className="absolute left-[5%] right-[5%] top-0 flex justify-between">
-          <RopePost side="left" />
-          <RopePost side="right" />
-        </div>
-        {/* Red-striped welcome mat */}
-        <div
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[60%] max-w-[280px] h-3 rounded-sm"
-          style={{
-            background: `repeating-linear-gradient(
-              90deg,
-              var(--color-circus-red) 0px,
-              var(--color-circus-red) 20px,
-              var(--color-tent-canvas) 20px,
-              var(--color-tent-canvas) 40px
-            )`,
-            border: "2px solid var(--color-toon-shadow)",
-            opacity: 0.8,
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-/* ───────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════
    MidwayGround
-   ═══════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════ */
 
 function MidwayGround({ scrollOffset }: { scrollOffset: number }) {
   return (
@@ -1168,7 +1302,6 @@ function MidwayGround({ scrollOffset }: { scrollOffset: number }) {
       className="absolute bottom-0 left-0 right-0 h-[15%] pointer-events-none z-5"
       style={{ transform: `translateX(${scrollOffset * 0.1}px)` }}
     >
-      {/* Dirt gradient */}
       <div
         className="absolute inset-0"
         style={{
@@ -1182,7 +1315,6 @@ function MidwayGround({ scrollOffset }: { scrollOffset: number }) {
           borderTop: "3px solid var(--color-toon-shadow)",
         }}
       />
-      {/* Sawdust texture dots */}
       <div className="absolute inset-0 overflow-hidden opacity-20">
         {Array.from({ length: 60 }, (_, i) => (
           <div
@@ -1203,9 +1335,9 @@ function MidwayGround({ scrollOffset }: { scrollOffset: number }) {
   );
 }
 
-/* ───────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════
    Prize Shelf slide
-   ═══════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════ */
 
 function PrizeShelfSlide({
   scrollOffset,
@@ -1214,12 +1346,11 @@ function PrizeShelfSlide({
   scrollOffset: number;
   viewportWidth: number;
 }) {
-  const boothCenter = 3 * viewportWidth; // 4th slide
+  const boothCenter = 3 * viewportWidth;
   const offset = scrollOffset - boothCenter;
 
   return (
     <div className="min-w-[100vw] h-dvh relative snap-center overflow-hidden flex-shrink-0 flex flex-col items-center justify-center">
-      {/* Night sky backdrop */}
       <div
         className="absolute inset-0"
         style={{
@@ -1227,7 +1358,6 @@ function PrizeShelfSlide({
           transform: `translateX(${offset * 0.2}px)`,
         }}
       />
-      {/* Stars */}
       <div
         className="absolute inset-0"
         style={{ transform: `translateX(${offset * 0.2}px)` }}
@@ -1248,12 +1378,10 @@ function PrizeShelfSlide({
         ))}
       </div>
 
-      {/* Small tent for prize shelf */}
       <div
         className="relative w-[70%] max-w-[280px] mb-5"
         style={{ transform: `translateX(${offset * 0.5}px)` }}
       >
-        {/* Mini tent top */}
         <div
           className="w-full h-32"
           style={{
@@ -1270,15 +1398,9 @@ function PrizeShelfSlide({
             boxShadow: "inset 0 -20px 40px rgba(0,0,0,0.3)",
           }}
         />
-        <div
-          className="w-full h-1"
-          style={{
-            background: "var(--color-toon-shadow)",
-          }}
-        />
+        <div className="w-full h-1" style={{ background: "var(--color-toon-shadow)" }} />
       </div>
 
-      {/* Sign and link */}
       <div
         style={{ transform: `translateX(${offset * 1.0}px)` }}
         className="flex flex-col items-center gap-4 z-10"
@@ -1328,7 +1450,6 @@ function PrizeShelfSlide({
         </Link>
       </div>
 
-      {/* Ground strip */}
       <div
         className="absolute bottom-0 left-0 right-0 h-[12%]"
         style={{ transform: `translateX(${offset * 1.2}px)` }}
@@ -1346,9 +1467,9 @@ function PrizeShelfSlide({
   );
 }
 
-/* ───────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════
    MidwayWalk — Main Component
-   ═══════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════ */
 
 export default function MidwayWalk() {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -1364,7 +1485,6 @@ export default function MidwayWalk() {
   const { triggerTransition } = useSceneTransition();
   const navigate = useNavigate();
 
-  // Track viewport width
   useEffect(() => {
     function handleResize() {
       setViewportWidth(window.innerWidth);
@@ -1373,7 +1493,6 @@ export default function MidwayWalk() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Scroll listener
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
@@ -1384,7 +1503,7 @@ export default function MidwayWalk() {
       const vw = track.clientWidth;
       if (vw > 0) {
         const idx = Math.round(offset / vw);
-        setActiveBooth(Math.min(idx, BOOTHS.length)); // allow up to prize shelf slide
+        setActiveBooth(Math.min(idx, BOOTHS.length));
       }
     }
 
@@ -1393,7 +1512,6 @@ export default function MidwayWalk() {
     return () => track.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Cleanup insufficient timer
   useEffect(() => {
     return () => {
       if (insufficientTimerRef.current) {
@@ -1402,7 +1520,6 @@ export default function MidwayWalk() {
     };
   }, []);
 
-  /** Navigate to a specific booth index */
   const scrollToBooth = useCallback(
     (index: number) => {
       const track = trackRef.current;
@@ -1415,14 +1532,12 @@ export default function MidwayWalk() {
     [],
   );
 
-  /** Handle PLAY tap on a booth */
   const handlePlay = useCallback(
     (index: number) => {
       const booth = BOOTHS[index];
       if (!booth) return;
 
       if (!spendTickets(booth.cost)) {
-        // Show sad clown
         setInsufficientBooth(index);
         if (insufficientTimerRef.current) {
           clearTimeout(insufficientTimerRef.current);
@@ -1440,11 +1555,34 @@ export default function MidwayWalk() {
     [spendTickets, triggerTransition, navigate],
   );
 
-  const totalSlides = BOOTHS.length + 1; // +1 for Prize Shelf
+  const totalSlides = BOOTHS.length + 1;
+
+  /** Render the appropriate booth scene based on bgDecorations */
+  const renderBoothScene = (booth: BoothConfig, i: number) => {
+    const shared = {
+      key: booth.route,
+      booth,
+      index: i,
+      scrollOffset,
+      viewportWidth,
+      onPlay: () => handlePlay(i),
+      showInsufficient: insufficientBooth === i,
+    };
+
+    switch (booth.bgDecorations) {
+      case "balloons":
+        return <BalloonPopBoothScene {...shared} />;
+      case "bottles":
+        return <BottleBashBoothScene {...shared} />;
+      case "ducks":
+        return <DuckPondBoothScene {...shared} />;
+      default:
+        return <BalloonPopBoothScene {...shared} />;
+    }
+  };
 
   return (
     <main className="w-full h-dvh overflow-hidden relative bg-midnight">
-      {/* Carousel Track */}
       <div
         ref={trackRef}
         className="flex h-full overflow-x-auto snap-x snap-mandatory scroll-smooth"
@@ -1454,43 +1592,19 @@ export default function MidwayWalk() {
           scrollbarWidth: "none",
         }}
       >
-        {BOOTHS.map((booth, i) =>
-          booth.bgDecorations === "balloons" ? (
-            <BalloonPopBoothScene
-              key={booth.route}
-              booth={booth}
-              index={i}
-              scrollOffset={scrollOffset}
-              viewportWidth={viewportWidth}
-              onPlay={() => handlePlay(i)}
-              showInsufficient={insufficientBooth === i}
-            />
-          ) : (
-            <BoothScene
-              key={booth.route}
-              booth={booth}
-              index={i}
-              scrollOffset={scrollOffset}
-              viewportWidth={viewportWidth}
-              onPlay={() => handlePlay(i)}
-              showInsufficient={insufficientBooth === i}
-            />
-          ),
-        )}
+        {BOOTHS.map((booth, i) => renderBoothScene(booth, i))}
         <PrizeShelfSlide
           scrollOffset={scrollOffset}
           viewportWidth={viewportWidth}
         />
       </div>
 
-      {/* WalkIndicator */}
       <WalkIndicator
         total={totalSlides}
         active={activeBooth}
         onSelect={scrollToBooth}
       />
 
-      {/* MidwayGround */}
       <MidwayGround scrollOffset={scrollOffset} />
     </main>
   );

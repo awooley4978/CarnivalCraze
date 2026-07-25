@@ -734,3 +734,28 @@
 .animate-sparkle-prize {
   animation: sparkle-prize 2s ease-in-out infinite;
 }
+
+/* ═══════════════════════════════════════════════════════
+   27. DRIFT-DUCK
+   Duck drifts left-to-right in the metal track channel
+   with gentle bobbing. Each duck has a different speed
+   and delay for natural staggered motion.
+   Duration: 3–5s (varied per duck) | Easing: ease-in-out | Infinite alternate
+   ═══════════════════════════════════════════════════════ */
+@keyframes drift-duck {
+  0% {
+    transform: translateX(-40px) translateY(0);
+  }
+  25% {
+    transform: translateX(-10px) translateY(-3px);
+  }
+  50% {
+    transform: translateX(20px) translateY(1px);
+  }
+  75% {
+    transform: translateX(30px) translateY(-2px);
+  }
+  100% {
+    transform: translateX(40px) translateY(0);
+  }
+}
