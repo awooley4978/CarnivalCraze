@@ -49,11 +49,11 @@ const BOOTHS: BoothConfig[] = [
     bgDecorations: "bottles",
   },
   {
-    name: "Duck Pond",
+    name: "Duck Shoot",
     route: "/duck-pond",
     cost: 1,
-    signText: "DUCK POND",
-    priceText: "3 PICKS — 1 🎟️",
+    signText: "DUCK SHOOT",
+    priceText: "3 SHOTS — 1 🎟️",
     emoji: "🦆",
     tentStripeColor: "var(--color-sky-pop)",
     tentBaseColor: "var(--color-deep-purple)",
@@ -84,6 +84,119 @@ function RopePost({ side }: { side: "left" | "right" }) {
         }}
       />
     </div>
+  );
+}
+
+/* ── Ambient Life Components ── */
+
+/** Pennant flags fluttering along the top of the midway */
+function PennantFlags() {
+  const flagColors = [
+    "var(--color-circus-red)",
+    "var(--color-electric-yellow)",
+    "var(--color-hot-magenta)",
+    "var(--color-acid-green)",
+    "var(--color-sky-pop)",
+    "var(--color-tangerine)",
+  ];
+
+  return (
+    <div className="absolute top-0 left-0 right-0 h-8 z-30 pointer-events-none" aria-hidden>
+      {Array.from({ length: 20 }, (_, i) => (
+        <div
+          key={i}
+          className="absolute"
+          style={{
+            top: 2,
+            left: `${(i * 19 + 3) % 100}%`,
+            animation: `pennant-flutter ${2.5 + (i % 3) * 0.8}s ease-in-out ${i * 0.3}s infinite`,
+          }}
+        >
+          <div
+            style={{
+              width: 0,
+              height: 0,
+              borderLeft: "7px solid transparent",
+              borderRight: "7px solid transparent",
+              borderBottom: `14px solid ${flagColors[i % flagColors.length]}`,
+              filter: "drop-shadow(1px 1px 0 var(--color-toon-shadow))",
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Ambient dust motes floating in spotlight beams */
+function DustMotes() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
+      {Array.from({ length: 12 }, (_, i) => {
+        const seed = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+        const rand = seed - Math.floor(seed);
+        return (
+          <div
+            key={i}
+            className="absolute rounded-full bg-tent-canvas"
+            style={{
+              width: `${1.5 + rand * 2.5}px`,
+              height: `${1.5 + rand * 2.5}px`,
+              left: `${15 + (i * 29 + 11) % 70}%`,
+              top: `${10 + (i * 23 + 7) % 75}%`,
+              animation: `dust-float ${8 + (i % 4) * 3}s ease-in-out ${i * 0.9}s infinite`,
+              opacity: 0,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/** Occasional ambient confetti pieces drifting across */
+function AmbientConfetti() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
+      {Array.from({ length: 3 }, (_, i) => {
+        const seed = Math.sin(i * 231.7 + 511.3) * 43758.5453;
+        const rand = seed - Math.floor(seed);
+        const colors = ["var(--color-circus-red)", "var(--color-electric-yellow)", "var(--color-hot-magenta)", "var(--color-sky-pop)", "var(--color-acid-green)"];
+        return (
+          <div
+            key={i}
+            className="absolute"
+            style={{
+              width: 6,
+              height: 4,
+              backgroundColor: colors[i % colors.length],
+              borderRadius: "1px",
+              left: `${20 + rand * 60}%`,
+              top: "-5%",
+              animation: `confetti-drift ${12 + i * 5}s linear ${i * 4}s infinite`,
+              opacity: 0.6,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/** Flicker bulb with chaotic rapid blinking */
+function FlickerBulb({ delayMs, size }: { delayMs: number; size?: number }) {
+  const s = size ?? 6;
+  return (
+    <div
+      className="rounded-full"
+      style={{
+        width: s,
+        height: s,
+        background: "var(--color-bulb-gold)",
+        border: "1px solid var(--color-toon-shadow)",
+        animation: `bulb-flicker ${2.5 + delayMs * 0.1}s step-end ${delayMs * 0.05}s infinite`,
+      }}
+    />
   );
 }
 
@@ -1158,7 +1271,7 @@ function DuckPondBoothScene({
                 letterSpacing: "0.05em",
               }}
             >
-              DUCK POND
+              DUCK SHOOT
             </h2>
           </div>
           {/* Bulb string bottom */}
@@ -1339,7 +1452,7 @@ function MidwayGround({ scrollOffset }: { scrollOffset: number }) {
    Prize Shelf slide
    ═══════════════════════════════════════════════════════ */
 
-function PrizeShelfSlide({
+function PrizeShackSlide({
   scrollOffset,
   viewportWidth,
 }: {
@@ -1378,10 +1491,21 @@ function PrizeShelfSlide({
         ))}
       </div>
 
+      {/* Prize Shack tent awning */}
       <div
         className="relative w-[70%] max-w-[280px] mb-5"
         style={{ transform: `translateX(${offset * 0.5}px)` }}
       >
+        {/* Bulb string across the top of awning */}
+        <div className="flex justify-center gap-1.5 mb-0.5">
+          {Array.from({ length: 9 }, (_, i) => (
+            <BlinkBulb
+              key={i}
+              delayClass={`delay-bulb-${(i % 10) + 1}`}
+              size={5}
+            />
+          ))}
+        </div>
         <div
           className="w-full h-32"
           style={{
@@ -1405,8 +1529,8 @@ function PrizeShelfSlide({
         style={{ transform: `translateX(${offset * 1.0}px)` }}
         className="flex flex-col items-center gap-4 z-10"
       >
-        <span className="text-5xl" role="img" aria-label="Prize Shelf">
-          🧸
+        <span className="text-5xl" role="img" aria-label="Prize Shack">
+          🏆
         </span>
         <h2
           className="text-center m-0"
@@ -1417,7 +1541,7 @@ function PrizeShelfSlide({
             textShadow: "3px 3px 0 var(--color-toon-shadow)",
           }}
         >
-          Prize Shelf
+          Prize Shack
         </h2>
         <p
           className="text-center m-0"
@@ -1583,6 +1707,11 @@ export default function MidwayWalk() {
 
   return (
     <main className="w-full h-dvh overflow-hidden relative bg-midnight">
+      {/* Ambient Life overlays */}
+      <PennantFlags />
+      <DustMotes />
+      <AmbientConfetti />
+
       <div
         ref={trackRef}
         className="flex h-full overflow-x-auto snap-x snap-mandatory scroll-smooth"
@@ -1593,7 +1722,7 @@ export default function MidwayWalk() {
         }}
       >
         {BOOTHS.map((booth, i) => renderBoothScene(booth, i))}
-        <PrizeShelfSlide
+        <PrizeShackSlide
           scrollOffset={scrollOffset}
           viewportWidth={viewportWidth}
         />
