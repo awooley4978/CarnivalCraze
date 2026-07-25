@@ -3,6 +3,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useTickets } from "~/context/TicketContext";
 import { usePrizes } from "~/context/PrizeContext";
 import { useSceneTransition } from "~/context/SceneContext";
+import { useSound } from "~/context/SoundContext";
 import { useSwipeGesture } from "~/hooks/useSwipeGesture";
 import Confetti from "~/components/Confetti";
 
@@ -276,6 +277,7 @@ function BalloonPop() {
   const { awardPrize } = usePrizes();
   const { triggerTransition } = useSceneTransition();
   const navigate = useNavigate();
+  const { playSfx, playMusic, setTempo, stopMusic } = useSound();
 
   const paidForSession = useRef(false);
   const awardedPrizeRef = useRef<string | null>(null);
@@ -283,24 +285,43 @@ function BalloonPop() {
 
   // ── Curtain exit via scene context ──
   const exitToMidway = useCallback(() => {
+    stopMusic();
     triggerTransition(() => {
       navigate({ to: "/" });
     });
-  }, [triggerTransition, navigate]);
+  }, [triggerTransition, navigate, stopMusic]);
 
   // ── Swipe-down gesture ──
   useSwipeGesture(mainRef, exitToMidway, 80);
+
+  // ── Music on mount ──
+  useEffect(() => {
+    playMusic("balloon");
+    return () => {
+      setTempo(1.0);
+    };
+  }, [playMusic, setTempo]);
 
   // ── Award tickets + prize on win ──
   useEffect(() => {
     if (gameState === "won" && !paidForSession.current) {
       paidForSession.current = true;
       earnTickets(2);
+      playSfx("ticket");
       awardedPrizeRef.current = awardPrize();
+      playSfx("prize");
+      playSfx("fanfare");
       // Trigger confetti after a tiny delay so the overlay renders first
       setTimeout(() => setShowConfetti(true), 100);
     }
-  }, [gameState, earnTickets, awardPrize]);
+  }, [gameState, earnTickets, awardPrize, playSfx]);
+
+  // ── Lose SFX ──
+  useEffect(() => {
+    if (gameState === "lost") {
+      playSfx("lose");
+    }
+  }, [gameState, playSfx]);
 
   // ── Handle balloon tap ──
   const handleBalloonClick = useCallback(
