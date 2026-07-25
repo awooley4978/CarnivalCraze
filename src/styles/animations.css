@@ -599,11 +599,11 @@
 }
 
 /* ═══════════════════════════════════════════════════
-   22. BOTTLE-SHIMMER
-   Subtle shimmer/pulse on standing bottles during
-   near-win tension. Warm golden glow fades in and out.
-   Duration: 1.2s | Easing: ease-in-out | Infinite
-   ═══════════════════════════════════════════════════ */
+       22. BOTTLE-SHIMMER
+       Subtle shimmer/pulse on standing bottles during
+       near-win tension. Warm golden glow fades in and out.
+       Duration: 1.2s | Easing: ease-in-out | Infinite
+       ═══════════════════════════════════════════════════ */
 @keyframes bottle-shimmer {
   0%, 100% {
     filter: brightness(1);
@@ -617,4 +617,120 @@
     filter: brightness(1.05);
     box-shadow: 4px 4px 0 var(--color-toon-shadow), 0 0 6px 2px rgba(255, 230, 0, 0.2);
   }
+}
+
+/* ═══════════════════════════════════════════════════
+   23. SPOTLIGHT-SWAY
+   Gentle ±1° rotation on trophy room spotlights.
+   Creates the illusion of hanging stage lights
+   shifting slightly in the tent breeze.
+   Duration: 6s | Easing: ease-in-out | Infinite
+   ═══════════════════════════════════════════════════ */
+@keyframes spotlight-sway {
+  0%, 100% {
+    transform: rotate(-0.8deg) translateX(-1px);
+  }
+  25% {
+    transform: rotate(1.2deg) translateX(2px);
+  }
+  50% {
+    transform: rotate(-0.5deg) translateX(-2px);
+  }
+  75% {
+    transform: rotate(1deg) translateX(1px);
+  }
+}
+
+.animate-spotlight-sway {
+  animation: spotlight-sway 6s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* ═══════════════════════════════════════════════════
+   24. DUST-FLOAT
+   Tiny dust motes drifting in spotlight beams.
+   Randomized vertical + horizontal drift with
+   subtle opacity pulse. Very slow and gentle.
+   Duration: 4–6s | Easing: ease-in-out | Infinite
+   ═══════════════════════════════════════════════════ */
+@keyframes dust-float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.15;
+  }
+  20% {
+    transform: translateY(-14px) translateX(6px);
+    opacity: 0.55;
+  }
+  40% {
+    transform: translateY(-8px) translateX(-4px);
+    opacity: 0.3;
+  }
+  60% {
+    transform: translateY(-18px) translateX(8px);
+    opacity: 0.6;
+  }
+  80% {
+    transform: translateY(-4px) translateX(-2px);
+    opacity: 0.25;
+  }
+}
+
+.animate-dust-float {
+  animation: dust-float 5s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   25. CURTAIN-RISE
+   Bottom-to-top reveal for the trophy room entrance.
+   Screen starts covered (dark), then reveals upward
+   like a theater curtain rising.
+   Duration: 0.8s | Easing: cubic-bezier(0.4,0,0.2,1)
+   ═══════════════════════════════════════════════════ */
+@keyframes curtain-rise {
+  0% {
+    clip-path: inset(100% 0 0 0);
+  }
+  60% {
+    clip-path: inset(15% 0 0 0);
+  }
+  80% {
+    clip-path: inset(-2% 0 0 0);
+  }
+  100% {
+    clip-path: inset(-5% 0 0 0);
+  }
+}
+
+.animate-curtain-rise {
+  animation: curtain-rise 0.8s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ═══════════════════════════════════════════════════
+   26. SPARKLE-PRIZE
+   Sparkle twinkle on rare/glowing prize emojis.
+   Alternating opacity + slight scale shifts.
+   Duration: 2s | Easing: ease-in-out | Infinite
+   ═══════════════════════════════════════════════════ */
+@keyframes sparkle-prize {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px var(--color-prize-sparkle)) brightness(1);
+    transform: scale(1);
+  }
+  25% {
+    filter: drop-shadow(0 0 14px var(--color-prize-sparkle)) brightness(1.15);
+    transform: scale(1.03);
+  }
+  50% {
+    filter: drop-shadow(0 0 6px var(--color-prize-sparkle)) brightness(1);
+    transform: scale(1);
+  }
+  75% {
+    filter: drop-shadow(0 0 18px var(--color-bulb-gold)) brightness(1.1);
+    transform: scale(1.04);
+  }
+}
+
+.animate-sparkle-prize {
+  animation: sparkle-prize 2s ease-in-out infinite;
 }

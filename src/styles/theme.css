@@ -252,4 +252,106 @@
       0 0 40px rgba(57, 255, 20, 0.2);
     letter-spacing: 0.05em;
   }
-}
+
+  /* Spotlight cone — radial gradient yellow beam */
+  .spotlight-cone {
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255, 230, 0, 0.5) 0%,
+      rgba(255, 215, 0, 0.25) 30%,
+      rgba(255, 200, 0, 0.08) 60%,
+      transparent 85%
+    );
+    pointer-events: none;
+  }
+
+  /* Spotlight cone dimmer variant for deeper rows */
+  .spotlight-cone-dim {
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255, 215, 0, 0.35) 0%,
+      rgba(255, 200, 0, 0.15) 30%,
+      rgba(255, 180, 0, 0.05) 55%,
+      transparent 80%
+    );
+    pointer-events: none;
+  }
+
+  /* Spotlight cone faint variant for deepest row */
+  .spotlight-cone-faint {
+    background: radial-gradient(
+      ellipse at center,
+      rgba(255, 200, 0, 0.22) 0%,
+      rgba(255, 180, 0, 0.08) 30%,
+      transparent 65%
+    );
+    pointer-events: none;
+  }
+
+  /* Pedestal top — wood platform */
+  .pedestal-top {
+    background: linear-gradient(
+      180deg,
+      var(--color-wood-light) 0%,
+      #8B5E3C 30%,
+      var(--color-wood-dark) 100%
+    );
+    border: 3px solid var(--color-toon-shadow);
+    border-radius: var(--radius-bounce);
+    box-shadow:
+      3px 3px 0 var(--color-toon-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+
+  /* Pedestal column — 3D cylinder illusion */
+  .pedestal-column {
+    background: linear-gradient(
+      90deg,
+      var(--color-wood-dark) 0%,
+      var(--color-wood-light) 15%,
+      #8B5E3C 40%,
+      var(--color-wood-light) 70%,
+      var(--color-wood-dark) 100%
+    );
+    border-left: 3px solid var(--color-toon-shadow);
+    border-right: 3px solid var(--color-toon-shadow);
+    box-shadow:
+      3px 0 0 var(--color-toon-shadow),
+      -3px 0 0 rgba(0, 0, 0, 0.2);
+  }
+
+  /* Pedestal base — wider than column */
+  .pedestal-base {
+    background: linear-gradient(
+      180deg,
+      #5C3A1E 0%,
+      var(--color-wood-dark) 40%,
+      #2A1508 100%
+    );
+    border: 3px solid var(--color-toon-shadow);
+    border-radius: 0.25rem;
+    box-shadow:
+      4px 4px 0 var(--color-toon-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  /* Wood floor plank gradient with perspective */
+  .bg-floor-planks {
+    background:
+      /* Horizontal plank lines */
+      repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 18px,
+        rgba(0, 0, 0, 0.3) 18px,
+        rgba(0, 0, 0, 0.3) 19px
+      ),
+      /* Wood base color */
+      linear-gradient(
+        180deg,
+        #5C3A1E 0%,
+        #3E2210 40%,
+        #2A1508 100%
+      );
+  }
+  }
