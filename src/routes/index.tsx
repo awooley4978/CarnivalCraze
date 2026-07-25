@@ -1,4 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
+import { useTickets } from "~/context/TicketContext";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -31,28 +33,54 @@ function BoothCard({
   emoji,
   name,
   cost,
+  costAmount,
   to,
 }: {
   emoji: string;
   name: string;
   cost: string;
+  costAmount: number;
   to: string;
 }) {
+  const navigate = useNavigate();
+  const { spendTickets } = useTickets();
+  const [showInsufficient, setShowInsufficient] = useState(false);
+
+  const handlePlay = useCallback(() => {
+    if (spendTickets(costAmount)) {
+      navigate({ to } as any);
+    } else {
+      setShowInsufficient(true);
+      setTimeout(() => setShowInsufficient(false), 2500);
+    }
+  }, [spendTickets, costAmount, navigate, to]);
+
   return (
-    <Link to={to} className="card-booth flex flex-col items-center gap-3 text-center no-underline">
+    <div className="card-booth flex flex-col items-center gap-3 text-center">
       <span className="text-4xl" role="img" aria-label={name}>
         {emoji}
       </span>
       <h3 className="font-carnival text-electric-yellow text-xl m-0">{name}</h3>
       <p className="font-toon text-tent-canvas text-sm m-0">{cost}</p>
-      <span className="ribbon-banner text-base mt-1 cursor-pointer select-none">
+      <button
+        type="button"
+        onClick={handlePlay}
+        className="ribbon-banner text-base mt-1 cursor-pointer select-none"
+      >
         PLAY
-      </span>
-    </Link>
+      </button>
+      {showInsufficient && (
+        <p className="font-toon text-hot-magenta text-xs animate-bounce-in m-0">
+          Not enough tickets! 🎟️
+        </p>
+      )}
+    </div>
   );
 }
 
 function Home() {
+  const { tickets } = useTickets();
+
   return (
     <main className="bg-midnight min-h-dvh flex flex-col">
       {/* Bulb string */}
@@ -76,10 +104,10 @@ function Home() {
         </div>
       </div>
 
-      {/* Ticket counter */}
+      {/* Ticket counter — live balance */}
       <div className="sticky top-0 z-10 flex justify-center py-2">
         <span className="ticket-counter text-lg sm:text-xl">
-          🎟️ 50
+          🎟️ {tickets}
         </span>
       </div>
 
@@ -90,6 +118,7 @@ function Home() {
             emoji="🎯"
             name="Balloon Pop"
             cost="2 Tickets"
+            costAmount={2}
             to="/balloon-pop"
           />
         </div>
@@ -98,6 +127,7 @@ function Home() {
             emoji="🥛"
             name="Milk Bottle Toss"
             cost="3 Tickets"
+            costAmount={3}
             to="/milk-bottle-toss"
           />
         </div>
@@ -106,6 +136,7 @@ function Home() {
             emoji="🦆"
             name="Duck Pond"
             cost="1 Ticket"
+            costAmount={1}
             to="/duck-pond"
           />
         </div>

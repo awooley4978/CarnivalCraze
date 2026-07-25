@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useTickets } from "~/context/TicketContext";
 
 export const Route = createFileRoute("/milk-bottle-toss")({
   component: MilkBottleToss,
@@ -79,6 +80,17 @@ function MilkBottleToss() {
   const [gameState, setGameState] = useState<GameState>("playing");
   const [lastHitId, setLastHitId] = useState<number | null>(null);
 
+  const { tickets, earnTickets } = useTickets();
+  const paidForSession = useRef(false);
+
+  // Award tickets once when the player wins this session
+  useEffect(() => {
+    if (gameState === "won" && !paidForSession.current) {
+      paidForSession.current = true;
+      earnTickets(3);
+    }
+  }, [gameState, earnTickets]);
+
   const handleBottleClick = useCallback(
     (id: number) => {
       if (gameState !== "playing") return;
@@ -111,6 +123,7 @@ function MilkBottleToss() {
     setThrowsLeft(TOTAL_THROWS);
     setGameState("playing");
     setLastHitId(null);
+    paidForSession.current = false;
   }, []);
 
   const fallenCount = bottles.filter((b) => b.fallen).length;
@@ -132,10 +145,13 @@ function MilkBottleToss() {
         </p>
       </div>
 
-      {/* Throw counter */}
-      <div className="sticky top-0 z-20 py-3">
+      {/* Throw counter + ticket balance */}
+      <div className="sticky top-0 z-20 py-3 flex gap-4">
         <span className="ticket-counter text-lg sm:text-xl">
           ⚾ x{throwsLeft}
+        </span>
+        <span className="ticket-counter text-lg sm:text-xl">
+          🎟️ {tickets}
         </span>
       </div>
 
@@ -215,6 +231,9 @@ function MilkBottleToss() {
                 </h2>
                 <p className="font-carnival text-tent-canvas text-xl">
                   +3 🎟️
+                </p>
+                <p className="font-toon text-tent-canvas/60 text-sm">
+                  Balance: 🎟️ {tickets}
                 </p>
                 <button
                   type="button"

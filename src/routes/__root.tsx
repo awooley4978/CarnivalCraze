@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
+import { TicketProvider } from "~/context/TicketContext";
 import appCss from "~/styles/app.css?url";
 
 export const Route = createRootRoute({
@@ -54,9 +55,11 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <RootDocument>
-      <Outlet />
-    </RootDocument>
+    <TicketProvider>
+      <RootDocument>
+        <Outlet />
+      </RootDocument>
+    </TicketProvider>
   );
 }
 
