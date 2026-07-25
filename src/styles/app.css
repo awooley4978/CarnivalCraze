@@ -1,0 +1,11 @@
+/*
+ * Carnival Craze — Main Stylesheet
+ *
+ * Import chain:
+ *   1. tailwindcss        → Tailwind v4 engine
+ *   2. theme.css          → @theme tokens + base/utility layers
+ *   3. animations.css     → @keyframes + convenience classes
+ */
+@import "tailwindcss";
+@import "./theme.css";
+@import "./animations.css";

@@ -1,0 +1,244 @@
+/*
+ * ┌─────────────── CARNIVAL CRAZE ───────────────┐
+ * │  Keyframe Animations                         │
+ * │  All timing follows cartoon physics:         │
+ * │  snappy entries, bouncy overshoot,           │
+ * │  staggered chaos for bulbs & confetti.       │
+ * └──────────────────────────────────────────────┘
+ *
+ *  USAGE (Tailwind v4 arbitrary animation):
+ *    animate-[blink-bulb_1.5s_ease-in-out_infinite]
+ *    animate-[bounce-in_0.6s_cubic-bezier(0.34,1.56,0.64,1)]
+ *    animate-[wiggle_0.4s_ease-in-out_infinite]
+ *
+ *  Or define utilities in @theme if preferred.
+ *  Each animation has a recommended duration and
+ *  easing noted in its comment block.
+ */
+
+/* ═══════════════════════════════════════════════════
+   1. BLINK-BULB
+   Carnival bulbs blinking on/off at staggered rhythms.
+   Apply with different animation-delay values on each
+   bulb to create the classic chase-light effect.
+   Duration: 1.5s | Easing: step-end (hard on/off)
+   ═══════════════════════════════════════════════════ */
+@keyframes blink-bulb {
+  0%, 100% {
+    opacity: 1;
+    box-shadow:
+      0 0 8px 3px var(--color-bulb-gold, #FFD700),
+      0 0 20px 6px rgba(255, 215, 0, 0.5),
+      0 0 40px 10px rgba(255, 215, 0, 0.25);
+  }
+  15% {
+    opacity: 0.15;
+    box-shadow: none;
+  }
+  30% {
+    opacity: 1;
+    box-shadow:
+      0 0 8px 3px var(--color-bulb-gold, #FFD700),
+      0 0 20px 6px rgba(255, 215, 0, 0.5),
+      0 0 40px 10px rgba(255, 215, 0, 0.25);
+  }
+  45% {
+    opacity: 0.2;
+    box-shadow: none;
+  }
+  60% {
+    opacity: 0.5;
+    box-shadow:
+      0 0 4px 2px var(--color-bulb-gold, #FFD700);
+  }
+  75% {
+    opacity: 1;
+    box-shadow:
+      0 0 8px 3px var(--color-bulb-gold, #FFD700),
+      0 0 20px 6px rgba(255, 215, 0, 0.5),
+      0 0 40px 10px rgba(255, 215, 0, 0.25);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   2. TENT-STRIPE-WAVE
+   Subtle wave/wiggle on striped tent fabric.
+   Mimics wind rippling through the big top canvas.
+   Duration: 4s | Easing: ease-in-out | Infinite
+   ═══════════════════════════════════════════════════ */
+@keyframes tent-stripe-wave {
+  0%, 100% {
+    transform: skewX(0deg) translateY(0);
+  }
+  25% {
+    transform: skewX(0.5deg) translateY(-2px);
+  }
+  50% {
+    transform: skewX(-0.3deg) translateY(1px);
+  }
+  75% {
+    transform: skewX(0.4deg) translateY(-1px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   3. BOUNCE-IN
+   Exaggerated cartoon bounce for elements entering
+   the screen. Overshoots, settles with a wobble.
+   Think: anvil dropping in a Looney Tunes short.
+   Duration: 0.6s | Easing: cubic-bezier(0.34,1.56,0.64,1)
+   ═══════════════════════════════════════════════════ */
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.92);
+  }
+  85% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   4. CONFETTI-FALL
+   Confetti pieces falling with rotation and slight
+   horizontal drift. Apply with randomized duration
+   (2s–5s) and delay per piece for natural scatter.
+   Duration: 3s (baseline) | Easing: linear | Infinite
+   ═══════════════════════════════════════════════════ */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg) translateX(0);
+    opacity: 1;
+  }
+  25% {
+    transform: translateY(25vh) rotate(90deg) translateX(15px);
+  }
+  50% {
+    transform: translateY(50vh) rotate(180deg) translateX(-10px);
+  }
+  75% {
+    transform: translateY(75vh) rotate(270deg) translateX(20px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(110vh) rotate(360deg) translateX(-15px);
+    opacity: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   5. PULSE-GLOW
+   A glowing aura that pulses — for "FREE PLAY"
+   moments, rare prizes, or call-to-action highlights.
+   Duration: 1.2s | Easing: ease-in-out | Infinite
+   ═══════════════════════════════════════════════════ */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 10px 4px var(--color-prize-sparkle, #E0FF00),
+      0 0 30px 8px rgba(224, 255, 0, 0.4),
+      0 0 60px 15px rgba(224, 255, 0, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 20px 8px var(--color-prize-sparkle, #E0FF00),
+      0 0 50px 15px rgba(224, 255, 0, 0.6),
+      0 0 90px 25px rgba(224, 255, 0, 0.35);
+    transform: scale(1.04);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   6. WIGGLE
+   Rubber-hose style wobble for characters/elements.
+   Like a cartoon character shaking off a hit.
+   Short, fast, silly.
+   Duration: 0.4s | Easing: ease-in-out | Infinite
+   ═══════════════════════════════════════════════════ */
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(0deg) translateX(0);
+  }
+  15% {
+    transform: rotate(3deg) translateX(-4px);
+  }
+  30% {
+    transform: rotate(-4deg) translateX(5px);
+  }
+  45% {
+    transform: rotate(2deg) translateX(-3px);
+  }
+  60% {
+    transform: rotate(-3deg) translateX(4px);
+  }
+  75% {
+    transform: rotate(1deg) translateX(-1px);
+  }
+  90% {
+    transform: rotate(-1deg) translateX(1px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   CONVENIENCE CLASSES
+   Pre-built animation utility classes so the engineer
+   doesn't need arbitrary variants everywhere.
+   ═══════════════════════════════════════════════════ */
+
+.animate-blink-bulb {
+  animation: blink-bulb 1.5s step-end infinite;
+}
+
+.animate-tent-stripe-wave {
+  animation: tent-stripe-wave 4s ease-in-out infinite;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-confetti-fall {
+  animation: confetti-fall 3s linear infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 1.2s ease-in-out infinite;
+}
+
+.animate-wiggle {
+  animation: wiggle 0.4s ease-in-out infinite;
+}
+
+/* Staggered blink delays — add to bulbs for chase effect */
+.delay-bulb-1  { animation-delay: 0s; }
+.delay-bulb-2  { animation-delay: 0.15s; }
+.delay-bulb-3  { animation-delay: 0.3s; }
+.delay-bulb-4  { animation-delay: 0.45s; }
+.delay-bulb-5  { animation-delay: 0.6s; }
+.delay-bulb-6  { animation-delay: 0.75s; }
+.delay-bulb-7  { animation-delay: 0.9s; }
+.delay-bulb-8  { animation-delay: 1.05s; }
+.delay-bulb-9  { animation-delay: 1.2s; }
+.delay-bulb-10 { animation-delay: 1.35s; }
+
+/* Confetti size & color variations — apply to individual pieces */
+.confetti-sm  { font-size: 0.5rem; width: 8px;  height: 8px; }
+.confetti-md  { font-size: 0.75rem; width: 12px; height: 12px; }
+.confetti-lg  { font-size: 1rem; width: 16px; height: 16px; }
+
+/* Hover wiggle trigger */
+.hover\:animate-wiggle:hover {
+  animation: wiggle 0.4s ease-in-out infinite;
+}
