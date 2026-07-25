@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { useTickets } from "~/context/TicketContext";
+import { usePrizes } from "~/context/PrizeContext";
 
 export const Route = createFileRoute("/duck-pond")({
   component: DuckPond,
@@ -43,13 +44,15 @@ function DuckPond() {
   const [totalReward, setTotalReward] = useState(0);
 
   const { tickets, earnTickets } = useTickets();
+  const { awardPrize } = usePrizes();
   const paidForSession = useRef(false);
+  const awardedPrizeRef = useRef<string | null>(null);
 
   const picksLeftRef = useRef(TOTAL_PICKS);
   const gameStateRef = useRef<GameState>("playing");
   const generationRef = useRef(0);
 
-  // Award tickets once when the game finishes — sum all picked duck values
+  // Award tickets and a prize once when the game finishes
   useEffect(() => {
     if (gameState === "finished" && !paidForSession.current) {
       paidForSession.current = true;
@@ -60,8 +63,9 @@ function DuckPond() {
       if (reward > 0) {
         earnTickets(reward);
       }
+      awardedPrizeRef.current = awardPrize();
     }
-  }, [gameState, ducks, earnTickets]);
+  }, [gameState, ducks, earnTickets, awardPrize]);
 
   // Stable random rotations for each duck position (regenerated on reset)
   const [rotations, setRotations] = useState<number[]>(() =>
@@ -115,6 +119,7 @@ function DuckPond() {
     picksLeftRef.current = TOTAL_PICKS;
     gameStateRef.current = "playing";
     paidForSession.current = false;
+    awardedPrizeRef.current = null;
     setRotations(
       Array.from({ length: DUCK_COUNT }, () => (Math.random() - 0.5) * 20),
     );
@@ -208,6 +213,12 @@ function DuckPond() {
                 <p className="font-toon text-tent-canvas/60 text-sm">
                   Balance: 🎟️ {tickets}
                 </p>
+
+                {awardedPrizeRef.current && (
+                  <p className="font-toon text-prize-sparkle text-sm animate-bounce-in glow-prize rounded-bounce px-3 py-1 bg-ink/50">
+                    You won {awardedPrizeRef.current}!
+                  </p>
+                )}
 
                 <button
                   type="button"

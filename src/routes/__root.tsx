@@ -7,6 +7,7 @@ import {
 import type { ReactNode } from "react";
 
 import { TicketProvider } from "~/context/TicketContext";
+import { PrizeProvider } from "~/context/PrizeContext";
 import appCss from "~/styles/app.css?url";
 
 export const Route = createRootRoute({
@@ -56,9 +57,11 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <TicketProvider>
-      <RootDocument>
-        <Outlet />
-      </RootDocument>
+      <PrizeProvider>
+        <RootDocument>
+          <Outlet />
+        </RootDocument>
+      </PrizeProvider>
     </TicketProvider>
   );
 }
