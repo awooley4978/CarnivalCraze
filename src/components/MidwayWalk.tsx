@@ -38,12 +38,12 @@ const BOOTHS: BoothConfig[] = [
     bgDecorations: "balloons",
   },
   {
-    name: "Milk Bottle Toss",
+    name: "Bottle Bash",
     route: "/milk-bottle-toss",
     cost: 3,
-    signText: "KNOCK 'EM DOWN!",
+    signText: "BOTTLE BASH",
     priceText: "4 THROWS — 3 🎟️",
-    emoji: "🥛",
+    emoji: "⚾",
     tentStripeColor: "var(--color-tangerine)",
     tentBaseColor: "var(--color-tent-canvas)",
     bgDecorations: "bottles",
@@ -567,6 +567,598 @@ function RopePost({ side }: { side: "left" | "right" }) {
 }
 
 /* ───────────────────────────────────────────
+   BalloonPopBoothScene — Custom Balloon Pop Booth
+   ═══════════════════════════════════════════ */
+
+/** A single hanging balloon on the back wall */
+function HangingBalloon({
+  color,
+  left,
+  delay,
+  size,
+}: {
+  color: string;
+  left: string;
+  delay: number;
+  size: number;
+}) {
+  return (
+    <div
+      className="absolute"
+      style={{
+        left,
+        top: "25%",
+        animation: `wiggle ${3 + delay * 0.7}s ease-in-out ${delay}s infinite`,
+        transformOrigin: "top center",
+      }}
+      aria-hidden
+    >
+      {/* String */}
+      <div
+        className="mx-auto w-px"
+        style={{
+          height: `${size * 1.6}px`,
+          background: "var(--color-tent-canvas)",
+          opacity: 0.5,
+        }}
+      />
+      {/* Balloon body */}
+      <div
+        style={{
+          width: `${size}px`,
+          height: `${size * 1.25}px`,
+          backgroundColor: color,
+          borderRadius: "50% 50% 50% 50% / 40% 40% 60% 60%",
+          border: "2px solid rgba(0,0,0,0.25)",
+          boxShadow: `inset -3px -5px 8px rgba(0,0,0,0.2), inset 2px 2px 6px rgba(255,255,255,0.35)`,
+        }}
+      />
+      {/* Knot */}
+      <div
+        className="mx-auto"
+        style={{
+          width: `${size * 0.22}px`,
+          height: `${size * 0.18}px`,
+          backgroundColor: color,
+          filter: "brightness(0.7)",
+          borderRadius: "2px",
+          border: "1px solid rgba(0,0,0,0.2)",
+        }}
+      />
+    </div>
+  );
+}
+
+/** A popped balloon scrap still pinned to the wall */
+function PoppedScrap({
+  color,
+  left,
+  top,
+  rotation,
+}: {
+  color: string;
+  left: string;
+  top: string;
+  rotation: number;
+}) {
+  return (
+    <div
+      className="absolute"
+      style={{
+        left,
+        top,
+        transform: `rotate(${rotation}deg)`,
+      }}
+      aria-hidden
+    >
+      {/* Tiny string stub */}
+      <div
+        className="mx-auto w-px"
+        style={{
+          height: "14px",
+          background: "var(--color-tent-canvas)",
+          opacity: 0.4,
+        }}
+      />
+      {/* Shriveled scrap */}
+      <div
+        style={{
+          width: "14px",
+          height: "10px",
+          backgroundColor: color,
+          borderRadius: "30% 70% 50% 50% / 30% 30% 70% 70%",
+          border: "1.5px solid rgba(0,0,0,0.3)",
+          opacity: 0.7,
+        }}
+      />
+    </div>
+  );
+}
+
+/** A dart stuck in the wooden counter */
+function StuckDart({ angle, left, top }: { angle: number; left: string; top: string }) {
+  return (
+    <div
+      className="absolute"
+      style={{
+        left,
+        top,
+        transform: `rotate(${angle}deg)`,
+        transformOrigin: "bottom center",
+      }}
+      aria-hidden
+    >
+      {/* Dart shaft */}
+      <div
+        style={{
+          width: "2px",
+          height: "28px",
+          background: "linear-gradient(180deg, #C0C0C0, #888)",
+          margin: "0 auto",
+        }}
+      />
+      {/* Dart flight (fletching) */}
+      <div
+        style={{
+          width: "0",
+          height: "0",
+          borderLeft: "4px solid transparent",
+          borderRight: "4px solid transparent",
+          borderBottom: "6px solid var(--color-hot-magenta)",
+          margin: "0 auto",
+        }}
+      />
+      {/* Dart tip (embedded in wood — just visible) */}
+      <div
+        style={{
+          width: "0",
+          height: "0",
+          borderLeft: "3px solid transparent",
+          borderRight: "3px solid transparent",
+          borderTop: "5px solid #CCC",
+          margin: "0 auto",
+          marginTop: "-1px",
+        }}
+      />
+    </div>
+  );
+}
+
+function BalloonPopBoothScene({
+  booth,
+  index,
+  scrollOffset,
+  viewportWidth,
+  onPlay,
+  showInsufficient,
+}: {
+  booth: BoothConfig;
+  index: number;
+  scrollOffset: number;
+  viewportWidth: number;
+  onPlay: () => void;
+  showInsufficient: boolean;
+}) {
+  const boothCenter = index * viewportWidth;
+  const offset = scrollOffset - boothCenter;
+
+  const layer1X = offset * 0.2;
+  const layer2X = offset * 0.5;
+  const layer3X = offset * 1.0;
+  const layer4X = offset * 1.2;
+
+  // Balloon colors
+  const balloonColors = [
+    "var(--color-circus-red)",
+    "var(--color-hot-magenta)",
+    "var(--color-acid-green)",
+    "var(--color-electric-yellow)",
+    "var(--color-sky-pop)",
+    "var(--color-tangerine)",
+  ];
+
+  return (
+    <div className="min-w-[100vw] h-dvh relative snap-center overflow-hidden flex-shrink-0">
+      {/* Layer 1: Backdrop — night sky */}
+      <div
+        className="absolute inset-0"
+        style={{ transform: `translateX(${layer1X}px)` }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(180deg, #0D0524 0%, #1A0A2E 50%, #2D1040 100%)`,
+          }}
+        />
+        {/* Stars */}
+        {Array.from({ length: 20 }, (_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-white"
+            style={{
+              width: 1 + (i % 3),
+              height: 1 + (i % 3),
+              left: `${(i * 37 + 13) % 100}%`,
+              top: `${(i * 23 + 7) % 40}%`,
+              opacity: 0.3 + (i % 3) * 0.2,
+              animation: `pulse-star ${2 + (i % 3)}s ease-in-out ${i * 0.3}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Layer 2: Booth Structure — wooden booth with awning */}
+      <div
+        className="absolute inset-x-0 top-[5%] bottom-[18%]"
+        style={{ transform: `translateX(${layer2X}px)` }}
+      >
+        {/* ── Striped awning (top portion) ── */}
+        <div
+          className="relative mx-auto w-[88%] h-[28%]"
+          style={{
+            background: `repeating-linear-gradient(
+              90deg,
+              var(--color-circus-red) 0px,
+              var(--color-circus-red) 52px,
+              var(--color-tent-canvas) 52px,
+              var(--color-tent-canvas) 104px
+            )`,
+            borderRadius: "50% 50% 0 0 / 15% 15% 0 0",
+            border: "4px solid var(--color-toon-shadow)",
+            borderBottom: "none",
+            boxShadow: "inset 0 -30px 50px rgba(0,0,0,0.25)",
+            overflow: "hidden",
+          }}
+        >
+          {/* Awning wave animation */}
+          <div
+            className="absolute inset-0 animate-tent-stripe-wave opacity-25"
+            style={{
+              background: `repeating-linear-gradient(
+                90deg,
+                transparent 0px,
+                transparent 44px,
+                rgba(255,255,255,0.06) 44px,
+                rgba(255,255,255,0.06) 88px
+              )`,
+            }}
+          />
+          {/* Pennant flags along awning bottom */}
+          {[10, 28, 46, 64, 82].map((pct, i) => (
+            <div
+              key={i}
+              className="absolute bottom-0"
+              style={{
+                left: `${pct}%`,
+                width: "0",
+                height: "0",
+                borderLeft: "7px solid transparent",
+                borderRight: "7px solid transparent",
+                borderTop: `10px solid ${i % 2 === 0 ? "var(--color-electric-yellow)" : "var(--color-hot-magenta)"}`,
+                filter: "drop-shadow(1px 1px 0 var(--color-toon-shadow))",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* ── Booth back wall (wooden planks) ── */}
+        <div
+          className="relative mx-auto w-[88%] h-[55%]"
+          style={{
+            background: `
+              repeating-linear-gradient(
+                0deg,
+                transparent 0px,
+                transparent 1px,
+                rgba(0,0,0,0.15) 1px,
+                rgba(0,0,0,0.15) 2px
+              ),
+              linear-gradient(180deg, #4A2A14 0%, #3E2210 40%, #2A1508 100%)
+            `,
+            borderLeft: "4px solid var(--color-toon-shadow)",
+            borderRight: "4px solid var(--color-toon-shadow)",
+            boxShadow: "inset 0 4px 20px rgba(0,0,0,0.5)",
+          }}
+        >
+          {/* ── Prize shelf at top of back wall ── */}
+          <div
+            className="absolute left-0 right-0 top-[8%] mx-3"
+            style={{
+              height: "3px",
+              background: "linear-gradient(180deg, #8B6340, #5C3A1E)",
+              borderBottom: "1px solid rgba(0,0,0,0.3)",
+            }}
+          />
+          <div
+            className="absolute left-0 right-0 top-[calc(8%+3px)] mx-2"
+            style={{
+              height: "8px",
+              background: "linear-gradient(180deg, #7A4F2B 0%, #5C3A1E 60%, #3E2210 100%)",
+              borderBottom: "2px solid var(--color-toon-shadow)",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
+            }}
+          />
+          {/* Prize emojis on the shelf */}
+          <div className="absolute left-[12%] top-[2%] text-lg" aria-hidden>🧸</div>
+          <div className="absolute left-[42%] top-[2%] text-lg" aria-hidden>⭐</div>
+          <div className="absolute left-[72%] top-[2%] text-lg" aria-hidden>🎪</div>
+
+          {/* ── Hanging balloons on back wall ── */}
+          {balloonColors.map((color, i) => (
+            <HangingBalloon
+              key={`balloon-${i}`}
+              color={color}
+              left={`${8 + i * 15}%`}
+              delay={i * 0.6}
+              size={28 + (i % 3) * 4}
+            />
+          ))}
+
+          {/* ── Popped balloon scraps ── */}
+          <PoppedScrap
+            color="var(--color-circus-red)"
+            left="22%"
+            top="55%"
+            rotation={-15}
+          />
+          <PoppedScrap
+            color="var(--color-acid-green)"
+            left="62%"
+            top="50%"
+            rotation={12}
+          />
+          <PoppedScrap
+            color="var(--color-sky-pop)"
+            left="78%"
+            top="60%"
+            rotation={-8}
+          />
+        </div>
+
+        {/* ── Wooden counter spanning booth width ── */}
+        <div
+          className="relative mx-auto w-[88%]"
+          style={{
+            height: "14px",
+            background: "linear-gradient(180deg, #8B6340 0%, #7A4F2B 15%, #5C3A1E 50%, #3E2210 100%)",
+            border: "4px solid var(--color-toon-shadow)",
+            borderTop: "5px solid #9B7348",
+            borderBottom: "none",
+            boxShadow: "0 6px 14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)",
+          }}
+        >
+          {/* ── Darts stuck in counter front ── */}
+          <StuckDart angle={-20} left="18%" top="-32px" />
+          <StuckDart angle={15} left="52%" top="-34px" />
+          <StuckDart angle={-8} left="78%" top="-30px" />
+
+          {/* Cork board texture dots on counter */}
+          <div className="absolute inset-0 overflow-hidden opacity-30">
+            {Array.from({ length: 15 }, (_, i) => (
+              <div
+                key={i}
+                className="absolute rounded-full"
+                style={{
+                  width: `${2 + (i % 2)}px`,
+                  height: `${2 + (i % 2)}px`,
+                  left: `${(i * 31 + 5) % 100}%`,
+                  top: `${40 + (i % 3) * 15}%`,
+                  background: "var(--color-cork)",
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* ── Counter front face ── */}
+        <div
+          className="relative mx-auto w-[88%]"
+          style={{
+            height: "10px",
+            background: "linear-gradient(180deg, #3E2210 0%, #2A1508 100%)",
+            borderLeft: "4px solid var(--color-toon-shadow)",
+            borderRight: "4px solid var(--color-toon-shadow)",
+            borderBottom: "4px solid var(--color-toon-shadow)",
+            boxShadow: "0 4px 10px rgba(0,0,0,0.6)",
+          }}
+        />
+      </div>
+
+      {/* Tent poles */}
+      <div
+        className="absolute left-[6%] top-[5%] bottom-[18%] w-2"
+        style={{
+          background: "linear-gradient(90deg, var(--color-ink), var(--color-toon-shadow))",
+          borderRadius: "2px",
+          transform: `translateX(${layer2X}px)`,
+        }}
+      />
+      <div
+        className="absolute right-[6%] top-[5%] bottom-[18%] w-2"
+        style={{
+          background: "linear-gradient(90deg, var(--color-toon-shadow), var(--color-ink))",
+          borderRadius: "2px",
+          transform: `translateX(${layer2X}px)`,
+        }}
+      />
+
+      {/* ── Bulb lights along awning edge ── */}
+      <div
+        className="absolute inset-x-0 top-[calc(5%+28%-8px)] z-10 flex justify-center"
+        style={{ transform: `translateX(${layer2X}px)` }}
+      >
+        <div className="w-[88%] flex justify-around px-4">
+          {Array.from({ length: 10 }, (_, i) => (
+            <div
+              key={i}
+              className="w-3.5 h-3.5 rounded-full animate-blink-bulb"
+              style={{
+                backgroundColor: "var(--color-bulb-gold)",
+                border: "2px solid var(--color-toon-shadow)",
+                boxShadow: "0 0 6px 2px var(--color-bulb-gold)",
+                animationDelay: `${i * 0.15}s`,
+                marginTop: "-6px",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Layer 3: Foreground — sign, price, emoji, PLAY */}
+      <div
+        className="absolute inset-0 flex flex-col items-center justify-center z-10"
+        style={{ transform: `translateX(${layer3X}px)` }}
+      >
+        {/* "POP 'EM ALL!" sign */}
+        <div
+          className="mb-2 px-6 py-3"
+          style={{
+            background: "linear-gradient(180deg, #3E2210, #7A4F2B)",
+            borderRadius: "var(--radius-bounce)",
+            border: "3px solid var(--color-toon-shadow)",
+            boxShadow: "4px 4px 0 var(--color-toon-shadow)",
+            transform: "rotate(-1.5deg)",
+          }}
+        >
+          <h2
+            className="text-center m-0"
+            style={{
+              fontFamily: "var(--font-carnival)",
+              color: "var(--color-electric-yellow)",
+              fontSize: "clamp(1.5rem, 6vw, 2.5rem)",
+              textShadow: "3px 3px 0 var(--color-toon-shadow)",
+              letterSpacing: "0.03em",
+            }}
+          >
+            {booth.signText}
+          </h2>
+        </div>
+
+        {/* Price chalkboard */}
+        <div
+          className="mb-5 px-4 py-2"
+          style={{
+            background: "#2A4A3A",
+            borderRadius: "8px",
+            border: "3px solid #3E2210",
+            boxShadow: "inset 0 2px 4px rgba(0,0,0,0.4)",
+            transform: "rotate(1deg)",
+          }}
+        >
+          <p
+            className="m-0 text-center"
+            style={{
+              fontFamily: "var(--font-toon)",
+              color: "#D4E8D0",
+              fontSize: "clamp(0.7rem, 2.5vw, 1rem)",
+              fontWeight: 600,
+              letterSpacing: "0.05em",
+            }}
+          >
+            {booth.priceText}
+          </p>
+        </div>
+
+        {/* Booth emoji */}
+        <span
+          className="text-5xl mb-4"
+          style={{
+            filter: "drop-shadow(3px 3px 0 var(--color-toon-shadow))",
+          }}
+          role="img"
+          aria-label={booth.name}
+        >
+          {booth.emoji}
+        </span>
+
+        {/* PLAY button */}
+        <button
+          type="button"
+          onClick={onPlay}
+          className="cursor-pointer select-none"
+          style={{
+            fontFamily: "var(--font-carnival)",
+            background: "var(--color-hot-magenta)",
+            color: "var(--color-tent-canvas)",
+            padding: "0.6rem 2.5rem",
+            borderRadius: "var(--radius-bounce)",
+            border: "3px solid var(--color-toon-shadow)",
+            boxShadow: "5px 5px 0 var(--color-toon-shadow)",
+            fontSize: "clamp(1rem, 4vw, 1.4rem)",
+            letterSpacing: "0.05em",
+            transform: "rotate(0.5deg)",
+            transition: "transform 0.1s ease, box-shadow 0.1s ease",
+          }}
+          onMouseDown={(e) => {
+            e.currentTarget.style.transform = "translate(2px, 2px) rotate(0.5deg)";
+            e.currentTarget.style.boxShadow = "2px 2px 0 var(--color-toon-shadow)";
+          }}
+          onMouseUp={(e) => {
+            e.currentTarget.style.transform = "rotate(0.5deg)";
+            e.currentTarget.style.boxShadow = "5px 5px 0 var(--color-toon-shadow)";
+          }}
+        >
+          PLAY
+        </button>
+
+        {/* Insufficient tickets */}
+        {showInsufficient && (
+          <div
+            className="mt-3 animate-bounce-in"
+            style={{ animationDuration: "0.6s" }}
+          >
+            <span
+              className="text-4xl block text-center"
+              role="img"
+              aria-label="Not enough tickets"
+            >
+              🤡
+            </span>
+            <p
+              className="m-0 text-center"
+              style={{
+                fontFamily: "var(--font-toon)",
+                color: "var(--color-hot-magenta)",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+              }}
+            >
+              Need more tickets!
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Layer 4: Ground — welcome mat, rope barriers */}
+      <div
+        className="absolute bottom-0 inset-x-0 h-[18%]"
+        style={{ transform: `translateX(${layer4X}px)` }}
+      >
+        <div className="absolute left-[5%] right-[5%] top-0 flex justify-between">
+          <RopePost side="left" />
+          <RopePost side="right" />
+        </div>
+        {/* Red-striped welcome mat */}
+        <div
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[60%] max-w-[280px] h-3 rounded-sm"
+          style={{
+            background: `repeating-linear-gradient(
+              90deg,
+              var(--color-circus-red) 0px,
+              var(--color-circus-red) 20px,
+              var(--color-tent-canvas) 20px,
+              var(--color-tent-canvas) 40px
+            )`,
+            border: "2px solid var(--color-toon-shadow)",
+            opacity: 0.8,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────
    MidwayGround
    ═══════════════════════════════════════════ */
 
@@ -862,17 +1454,29 @@ export default function MidwayWalk() {
           scrollbarWidth: "none",
         }}
       >
-        {BOOTHS.map((booth, i) => (
-          <BoothScene
-            key={booth.route}
-            booth={booth}
-            index={i}
-            scrollOffset={scrollOffset}
-            viewportWidth={viewportWidth}
-            onPlay={() => handlePlay(i)}
-            showInsufficient={insufficientBooth === i}
-          />
-        ))}
+        {BOOTHS.map((booth, i) =>
+          booth.bgDecorations === "balloons" ? (
+            <BalloonPopBoothScene
+              key={booth.route}
+              booth={booth}
+              index={i}
+              scrollOffset={scrollOffset}
+              viewportWidth={viewportWidth}
+              onPlay={() => handlePlay(i)}
+              showInsufficient={insufficientBooth === i}
+            />
+          ) : (
+            <BoothScene
+              key={booth.route}
+              booth={booth}
+              index={i}
+              scrollOffset={scrollOffset}
+              viewportWidth={viewportWidth}
+              onPlay={() => handlePlay(i)}
+              showInsufficient={insufficientBooth === i}
+            />
+          ),
+        )}
         <PrizeShelfSlide
           scrollOffset={scrollOffset}
           viewportWidth={viewportWidth}

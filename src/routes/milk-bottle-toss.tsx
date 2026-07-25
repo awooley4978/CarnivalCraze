@@ -117,8 +117,8 @@ function generateDustParticles(): DustParticle[] {
 
 // ── Diegetic UI Sub-components ─────────────────────
 
-/** Wooden sign hanging above the booth: "KNOCK 'EM DOWN!" */
-function KnockSign({ glow }: { glow?: boolean }) {
+/** Wooden sign hanging above the booth: "BOTTLE BASH" */
+function BashSign({ glow }: { glow?: boolean }) {
   return (
     <div
       className={`
@@ -130,7 +130,7 @@ function KnockSign({ glow }: { glow?: boolean }) {
       `}
     >
       <p className="font-carnival text-tent-canvas text-lg sm:text-2xl m-0 text-center leading-tight">
-        KNOCK &rsquo;EM DOWN!
+        BOTTLE BASH
       </p>
       {/* Hanging rope illusion */}
       <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-1 h-3 bg-tent-canvas/60 rounded-full" />
@@ -602,7 +602,7 @@ function MilkBottleToss() {
       {/* ═══ CENTER AREA: SIGN + PYRAMID + LEDGE ═══ */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-dvh px-3 pt-14 pb-36">
         {/* Sign */}
-        <KnockSign glow={isNearWin} />
+        <BashSign glow={isNearWin} />
 
         {/* Booth backdrop for the pyramid area */}
         <div
