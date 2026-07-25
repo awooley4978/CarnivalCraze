@@ -13,9 +13,24 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "My site" },
+      { title: "Carnival Craze" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      {
+        rel: "preconnect",
+        href: "https://fonts.googleapis.com",
+      },
+      {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Fredoka:wght@400;500;600;700&display=swap",
+      },
+    ],
   }),
   notFoundComponent: () => <div>Page not found</div>,
   component: RootComponent,
